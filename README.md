@@ -11,9 +11,10 @@ it uses python's [asteroid](https://pypi.org/project/astroid/) module to parse t
 ## development progres
 
 ### in progress
-code parser
+code parser (data compression)
 
 ### planned features
+multi file
 docstring detection  
 ai integration  
 github actions support (for things like auto docuentations on push)
