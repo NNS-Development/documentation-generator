@@ -7,7 +7,6 @@ print(f"ast: {parser.getuncompressed()}")
 
 _, comp = parser.zlibcomp()
 print(f"compressed: {comp}")
-
 print("attempting to decompress")
 
 import base64, zlib, ast
