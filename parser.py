@@ -66,6 +66,46 @@ class Parser:
             
         return s
     
+    @staticmethod
+    def unreplacek(s: str) -> str:
+        '''
+        replaces keywords with shorterned characters
+        '''
+        replacements = {
+            "FormattedValue": "FV",
+            "FunctionDef": "FD",
+            "ExceptHandler": "EX",
+            "ImportFrom": "IF",
+            "AnnAssign": "AA",
+            "Attribute": "ATT",
+            "arguments": "ARG",
+            "Subscript": "SS",
+            "Constant": "CO",
+            "ClassDef": "CD",
+            "UnaryOp": "UO",
+            "keyword": "K",
+            "Starred": "ST",
+            "Return": "R",
+            "Assign": "AS",
+            "Import": "I",
+            "Module": "M",
+            "alias": "AL",
+            "Store": "S",
+            "value": "val",
+            "Call": "C",
+            "Expr": "E",
+            "Name": "N",
+            "Load": "L"
+        }
+        
+        revreplacements = {v: k for k, v in replacements.items()}
+    
+        # Perform all replacements from the dictionary
+        for long, short in revreplacements.items():
+            s = s.replace(long, short)
+            
+        return s
+    
     @outputlen
     def getuncompressed(self) -> str:
         '''prints the ast in an uncompressed format'''
