@@ -11,7 +11,7 @@ its current in development, so you cannot use it :3
 soon though.  
 
 ## what does this do?
-this aims to give users a fast and easy way to generate docstrings/documentation for their python programs
+this aims to give users a fast and easy way to generate docstrings/documentation for their python programs (for now only python)
 
 ## how does it work?
 it uses python's [ast](https://docs.python.org/3/library/ast.html) module to parse the code into an ast, then processes it using google gemini's api key to generate a suitable summary of the code.
