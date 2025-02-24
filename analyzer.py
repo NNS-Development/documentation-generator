@@ -2,9 +2,8 @@ import warnings
 import os
 import base64
 import zlib
-import google.generativeai as genai
+import google.generativeai as genai # type: ignore
 from parser import Parser
-from typing import Dict
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -51,52 +50,52 @@ def analyze_code(compressed_ast: str) -> str:
     Please structure your documentation following these specific sections:
     
     1. # Project Overview
-       - Main purpose and functionality of the code
-       - High-level architecture/design patterns used
-       - Key features
+        - Main purpose and functionality of the code
+        - High-level architecture/design patterns used
+        - Key features
     
     2. # Technical Documentation
-       ## Classes
-       For each class:
-       - Class name and inheritance
-       - Purpose and responsibilities 
-       - Class attributes and their types
-       - Method descriptions with:
+        ## Classes
+        For each class:
+        - Class name and inheritance
+        - Purpose and responsibilities 
+        - Class attributes and their types
+        - Method descriptions with:
          * Parameters and their types
          * Return values
          * Side effects
          * Usage examples
     
-       ## Functions
-       For each function:
-       - Function signature
-       - Purpose
-       - Parameters and their types
-       - Return value and type
-       - Examples with expected outputs
-       - Any exceptions raised
+        ## Functions
+        For each function:
+        - Function signature
+        - Purpose
+        - Parameters and their types
+        - Return value and type
+        - Examples with expected outputs
+        - Any exceptions raised
     
     3. # Dependencies
-       - Required external packages
-       - Version requirements
-       - System requirements
+        - Required external packages
+        - Version requirements
+        - System requirements
     
     4. # Implementation Details
-       - Key algorithms explained
-       - Important design decisions
-       - Performance considerations
-       - Threading/async behavior (if any)
+        - Key algorithms explained
+        - Important design decisions
+        - Performance considerations
+        - Threading/async behavior (if any)
     
     5. # Usage Guide
-       - Installation instructions
-       - Configuration requirements
-       - Code examples for common use cases
-       - Best practices
+        - Installation instructions
+        - Configuration requirements
+        - Code examples for common use cases
+        - Best practices
     
     6. # Notes and Warnings
-       - Known limitations
-       - Common pitfalls
-       - Security considerations (if applicable)
+        - Known limitations
+        - Common pitfalls
+        - Security considerations (if applicable)
     
     Format the documentation in clean, well-structured markdown with appropriate headers, code blocks, and lists. Use ```python for code examples.
     
