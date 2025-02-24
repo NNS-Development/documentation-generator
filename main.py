@@ -28,7 +28,7 @@ def main():
         parser.parsefile()
         compression_result = parser.zlibcomp()
         compressed_ast = compression_result[1]  # Get actual compressed string, not the length info
-
+        print(compressed_ast)
         # Generate documentation
         print("\nGenerating documentation using Gemini API...")
         analyze_main(compressed_ast)

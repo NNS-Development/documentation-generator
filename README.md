@@ -17,11 +17,16 @@ this aims to give users a fast and easy way to generate docstrings/documentation
 it uses python's [ast](https://docs.python.org/3/library/ast.html) module to parse the code into an ast, then processes it using google gemini's api key to generate a suitable summary of the code.
 
 ## development progress
+using [test.py](test.py) generates [documentation.md](documentation.md), which used:
+Prompt tokens: 1430
+Response tokens: 1318
+Total tokens: 2748
 
 ### completed
 code parser
 data compression
 basic ai prompt
+
 
 ### in progress
 ai analyzer
