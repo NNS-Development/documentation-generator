@@ -1,3 +1,11 @@
+"""
+analyer.py
+
+get the encoded string from parser.py using Parser.zlibcomp()
+pass it using the code i put in analyzer.py for realsies
+magic
+analyzer finished ong
+"""
 import os
 import google.generativeai as genai
 
