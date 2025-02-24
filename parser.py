@@ -31,7 +31,7 @@ class Parser:
     @staticmethod
     def replacek(s: str) -> str:
         '''
-        replaces keywords with shorterned characters
+        replaces keywords with shortened characters
         '''
         replacements = {
             "FormattedValue": "FV",
@@ -69,7 +69,7 @@ class Parser:
     @staticmethod
     def unreplacek(s: str) -> str:
         '''
-        replaces keywords with shorterned characters
+        replaces shortened characters with original keywords
         '''
         replacements = {
             "FormattedValue": "FV",
@@ -110,7 +110,7 @@ class Parser:
     def getuncompressed(self) -> str:
         '''prints the ast in an uncompressed format'''
         if not self.tree:
-            raise RuntimeError("ast is empty. have you run parsefile() yet?") # \nreport this to https://github.com/ellipticobj/documentation-generator/issues/new
+            raise RuntimeError("ast is empty. have you run parsefile() yet?")
         
         ast: str = dump(self.tree, indent=4)
         print(ast)
@@ -127,12 +127,12 @@ class Parser:
         
         # ballpark figures lol
         # removes unnecessary whitespace and attributes (decreases length of output by ~71%)
-        compast: str = dump(self.tree, annotate_fields=False, include_attributes=False, indent=0, show_empty=False)
+        compast: str = dump(self.tree, annotate_fields=False, include_attributes=False, indent=0)
         
         # remove newlines + whitespace (decreases length by ~7%)
         compast = "".join(compast.split())
         
-        # replace keywords with shorter wersions (decreases length by ~40%)
+        # replace keywords with shorter versions (decreases length by ~40%)
         compast = self.replacek(compast)
             
         print(compast)
@@ -143,7 +143,6 @@ class Parser:
         """
         compresses the ast, then compresses it again using zlib
         can be passed into gemini 2.0 pro
-        https://aistudio.google.com/prompts/1RVQLvTAJqwBIctnmLxReYX-N07lOwL0X
         """
         if not self.tree:
             raise RuntimeError("AST is empty. Have you run parsefile() yet?")
@@ -153,13 +152,12 @@ class Parser:
             self.tree,
             annotate_fields=False,
             include_attributes=False,
-            indent=0,
-            show_empty=False
+            indent=0
         )
         # no whitespace
         ast = "".join(ast.split())
         
-        # replace keywords with shorter wersions (decreases length by ~40%)
+        # replace keywords with shorter versions (decreases length by ~40%)
         ast = self.replacek(ast)
         
         # base64 compressed bytes
@@ -167,17 +165,5 @@ class Parser:
         encstr = base64.b64encode(compbytes).decode('utf-8')
         
         return encstr
-
 if __name__ == "__main__":
-    parser = Parser("parser.py") # parses itself lol funny haha
-    parser.parsefile()
-    outs: List[Tuple[str, str]] = []
-    outs.append(parser.getuncompressed())
-    outs.append(parser.getcompressed())
-    outs.append(parser.zlibcomp())
-    
-    for i in outs:
-        print(i[1])
-    print()
-    for i in outs:
-        print(i[0])
+    Parser()
