@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional
 from ast import dump, parse, AST, Module
 import zlib
 import base64
@@ -60,7 +60,7 @@ class Parser:
             "Load": "L"
         }
     
-        # Perform all replacements from the dictionary
+        # does the actual replacement
         for long, short in replacements.items():
             s = s.replace(long, short)
             
@@ -100,7 +100,7 @@ class Parser:
         
         revreplacements = {v: k for k, v in replacements.items()}
     
-        # Perform all replacements from the dictionary
+        # unreplaces
         for long, short in revreplacements.items():
             s = s.replace(long, short)
             
@@ -165,5 +165,19 @@ class Parser:
         encstr = base64.b64encode(compbytes).decode('utf-8')
         
         return encstr
+
+    def parse(self, zlibc: bool = True) -> str:
+        '''entry point'''
+        self.parsefile()
+
+        if zlibc:
+            _, data = self.zlibcomp()
+        else:
+            _, data = self.getcompressed()
+
+        return data
+    
 if __name__ == "__main__":
-    Parser()
+    p = Parser("parser.py")
+
+    print(p.parse())
