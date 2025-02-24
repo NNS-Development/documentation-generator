@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 from ast import dump, parse, AST, Module
 import zlib
 import base64
-
+    
 def outputlen(func):
     '''returns the length of the output of a function'''
     def wrapper(*args, **kwargs):
@@ -11,13 +11,17 @@ def outputlen(func):
             outputlen = len(out)
         except TypeError:
             outputlen = 0
-        return f"output of {func.__name__} is {outputlen} characters long", out
+        if args[0].debug:
+            args[0].outlens.append(f"output of {func.__name__} is {outputlen} characters long")
+        return out
     return wrapper
-    
 class Parser:
-    def __init__(self, filename: str = "") -> None:
+    def __init__(self, filename: str = "", debug: bool = False) -> None:
         self.filename: str = filename
         self.tree: Optional[AST] = None
+        self.debug = debug
+        if debug:
+            self.outlens: List[str] = []
     
     def parsefile(self) -> Module:
         '''parses the file and returns the ast'''
@@ -171,13 +175,17 @@ class Parser:
         self.parsefile()
 
         if zlibc:
-            _, data = self.zlibcomp()
+            data = self.zlibcomp()
         else:
-            _, data = self.getcompressed()
+            data = self.getcompressed()
 
         return data
     
 if __name__ == "__main__":
-    p = Parser("parser.py")
-
+    p = Parser("parser.py", True)
+    print(p.parse(False))
     print(p.parse())
+    print()
+    print()
+    for i in p.outlens:
+        print(i)

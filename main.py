@@ -25,9 +25,7 @@ def main():
 
         # Parse and compress the file
         print("Parsing and compressing file...")
-        parser.parsefile()
-        compression_result = parser.zlibcomp()
-        compressed_ast = compression_result[1]  # Get actual compressed string, not the length info
+        compressed_ast = parser.parse())  # Get actual compressed string, not the length info
 
         # Generate documentation
         print("\nGenerating documentation using Gemini API...")
