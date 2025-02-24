@@ -1,6 +1,6 @@
 # documentation generator for python (for now)
 this is an automatic documentation generator using generative ai made in python.  
-this should not be usediin production-ready apps. it is not a replacement for actual humans.  
+this should not be used in production-ready apps. it is not a replacement for actual humans.  
 
 ## IMPORTANT NOTES
 this CAN use a HUGE amount of tokens if your codebase is big. PLEASE PLEASE DO NOT use this on actual projects.   
