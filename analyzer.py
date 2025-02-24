@@ -1,3 +1,14 @@
+import warnings
+import os
+import base64
+import zlib
+import google.generativeai as genai
+from parser import Parser
+from typing import Dict
+# Suppress GRPC warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 """
 analyzer.py
 
@@ -5,39 +16,12 @@ Gets the encoded string from parser.py using Parser.zlibcomp()
 Analyzes the decompressed code using Gemini API
 Generates documentation
 """
-import warnings
-import os
-# Suppress GRPC warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import base64
-import zlib
-import google.generativeai as genai
-from typing import Dict
-
-def unreplacek(s: str) -> str:
-    """Replace shortened tokens with their original keywords"""
-    replacements: Dict[str, str] = {
-        "FormattedValue": "FV", "FunctionDef": "FD", "ExceptHandler": "EX",
-        "ImportFrom": "IF", "AnnAssign": "AA", "Attribute": "ATT", 
-        "arguments": "ARG", "Subscript": "SS", "Constant": "CO",
-        "ClassDef": "CD", "UnaryOp": "UO", "keyword": "K",
-        "Starred": "ST", "Return": "R", "Assign": "AS",
-        "Import": "I", "Module": "M", "alias": "AL",
-        "Store": "S", "value": "val", "Call": "C",
-        "Expr": "E", "Name": "N", "Load": "L"
-    }
-    
-    revreplacements = {v: k for k, v in replacements.items()}
-    for long, short in revreplacements.items():
-        s = s.replace(long, short)
-    return s
 
 def decompress_ast(compressed: str) -> str:
     """Decompress a base64+zlib compressed AST string"""
     decoded = base64.b64decode(compressed)
     decompressed = zlib.decompress(decoded)
-    return unreplacek(decompressed.decode('utf-8'))
+    return Parser.unreplacek(decompressed.decode('utf-8'))
 
 def analyze_code(compressed_ast: str) -> str:
     """Analyze code using Gemini API and generate documentation"""
@@ -57,7 +41,7 @@ def analyze_code(compressed_ast: str) -> str:
     # Initialize model
     model = genai.GenerativeModel(
         model_name="gemini-pro",
-        generation_config=generation_config
+        generation_config=generation_config # type: ignore
     )
 
 
@@ -144,8 +128,7 @@ def analyze_code(compressed_ast: str) -> str:
     return response.text
 
 def main(compressed_ast):
-
-    
+    '''entry point'''
     # Generate documentation
     documentation = analyze_code(compressed_ast)
     
@@ -156,4 +139,6 @@ def main(compressed_ast):
     print("Documentation generated and saved to documentation.md")
 
 if __name__ == "__main__":
-    main()
+    p = Parser("main.py")
+    compressed_ast = p.parse()
+    main(compressed_ast)

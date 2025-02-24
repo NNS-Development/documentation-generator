@@ -1,3 +1,7 @@
+from parser import Parser
+from analyzer import main as analyze_main
+import sys
+
 """
 main.py
 
@@ -7,12 +11,8 @@ Main script that coordinates between parser.py and analyzer.py to:
 3. Generate documentation using Gemini API
 """
 
-from parser import Parser
-from analyzer import main as analyze_main
-import sys
-
 def main():
-    # Get filename from command line args or prompt user
+    # gits filename
     if len(sys.argv) > 1:
         filename = sys.argv[1]
     else:
@@ -25,9 +25,7 @@ def main():
 
         # Parse and compress the file
         print("Parsing and compressing file...")
-        parser.parsefile()
-        compression_result = parser.zlibcomp()
-        compressed_ast = compression_result[1]  # Get actual compressed string, not the length info
+        compressed_ast = parser.parse()  # Get actual compressed string, not the length info
         print(compressed_ast)
         # Generate documentation
         print("\nGenerating documentation using Gemini API...")
