@@ -4,7 +4,6 @@ import base64
 import zlib
 import google.generativeai as genai
 from parser import Parser
-from typing import Dict
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -29,13 +28,12 @@ def analyze_code(compressed_ast: str) -> str:
     # Configure API
     api_key = input("Input your Gemini API key: ")
     genai.configure(api_key=api_key)
-
+    print("Generating documentation...")
     # Configure generation parameters
     generation_config = {
         "temperature": 0,
-        "top_p": 0.95,
-        "top_k": 64,
-        "max_output_tokens": 8192,
+        "top_p": 0.55,
+        "max_output_tokens": 16384,
     }
 
     # Initialize model
@@ -54,9 +52,10 @@ def unrep(s):
     i={'FV':'FormattedValue','FD':'FunctionDef','EX':'ExceptHandler','IF':'ImportFrom','AA':'AnnAssign','ATT':'Attribute','ARG':'arguments','SS':'Subscript','CO':'Constant','CD':'ClassDef','UO':'UnaryOp','K':'keyword','ST':'Starred','R':'Return','AS':'Assign','I':'Import','M':'Module','AL':'alias','S':'Store','val':'value','C':'Call','E':'Expr','N':'Name','L':'Load'}
     for l,x in i.items():s=s.replace(l,x)
     return s
-a = ast.unparse(ast.parse(unrep(zlib.decompress(base64.b64decode(comp)).decode('utf-8'))))
+def decompress(c):
+    return ast.unparse(ast.parse(unrep(zlib.decompress(base64.b64decode(c)).decode('utf-8'))))
 ```
-Your task is to analyze the provided Python Abstract Syntax Tree (AST) and generate comprehensive, professional documentation.
+Your task is to analyze the decoded Python Abstract Syntax Tree (AST) and generate comprehensive, professional documentation.
 Please structure your documentation following these specific sections:
 1. # Project Overview
 - Main purpose and functionality of the code
