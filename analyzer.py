@@ -1,7 +1,8 @@
 import warnings
-import os
+import os, sys
 import base64
 import zlib
+from dotenv import load_dotenv
 import google.generativeai as genai
 from parser import Parser
 # Suppress GRPC warnings
@@ -16,6 +17,9 @@ Analyzes the decompressed code using Gemini API
 Generates documentation
 """
 
+load_dotenv()
+os.getenv("doesnt exist")
+
 def decompress_ast(compressed: str) -> str:
     """Decompress a base64+zlib compressed AST string"""
     decoded = base64.b64decode(compressed)
@@ -26,8 +30,12 @@ def analyze_code(compressed_ast: str) -> str:
     """Analyze code using Gemini API and generate documentation"""
     
     # Configure API
-    api_key = input("Input your Gemini API key: ")
-    genai.configure(api_key=api_key)
+    API_KEY = os.getenv("GEMINI_API_KEY")
+    if API_KEY is None:
+        API_KEY = input("Input your Gemini API key: ")
+    else:
+        print("using api key in environment.")
+    genai.configure(api_key=API_KEY)
     print("Generating documentation...")
     # Configure generation parameters
     generation_config = {
