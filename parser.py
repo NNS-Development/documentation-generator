@@ -15,6 +15,7 @@ def outputlen(func):
             args[0].outlens.append(f"output of {func.__name__} is {outputlen} characters long")
         return out
     return wrapper
+
 class Parser:
     def __init__(self, filename: str = "", debug: bool = False) -> None:
         self.filename: str = filename
@@ -181,10 +182,14 @@ class Parser:
 
         return data
     
+    def __call__(self, zlibc: bool = True) -> str:
+        '''Makes the Parser instance callable, equivalent to parse()'''
+        return self.parse(zlibc)
+    
 if __name__ == "__main__":
     p = Parser("parser.py", True)
-    print(p.parse(False))
-    print(p.parse())
+    print(p(False))  # Using new callable syntax
+    print(p())       # Using new callable syntax
     print()
     print()
     for i in p.outlens:
