@@ -127,7 +127,7 @@ def analyze_code(compressed_ast: str) -> str:
     print(f"Response tokens: {response_tokens}")
     print(f"Total tokens: {prompt_tokens + response_tokens}")
     
-    return response.text
+    return "\n  ".join(response.text.splitlines()[1:-1])
 
 def main(compressed_ast):
     '''entry point'''
