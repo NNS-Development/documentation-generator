@@ -12,7 +12,7 @@ Main script that coordinates between parser.py and analyzer.py to:
 """
 
 def main():
-    # gits filename
+    # get filename
     if len(sys.argv) > 1:
         filename = sys.argv[1]
     else:
@@ -23,10 +23,11 @@ def main():
         print(f"\nInitializing parser for {filename}...")
         parser = Parser(filename)
 
-        # Parse and compress the file
+        # Parse and compress the file using the new callable syntax
         print("Parsing and compressing file...")
-        compressed_ast = parser.parse()  # Get actual compressed string, not the length info
+        compressed_ast = parser()  # Using new callable syntax
         print(compressed_ast)
+        
         # Generate documentation
         print("\nGenerating documentation using Gemini API...")
         analyze_main(compressed_ast)
