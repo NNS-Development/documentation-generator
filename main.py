@@ -1,5 +1,5 @@
 from parser import Parser
-from analyzer import main as analyze_main
+from analyzer import analyze as analyze_main
 import sys
 
 """
@@ -11,7 +11,7 @@ Main script that coordinates between parser.py and analyzer.py to:
 3. Generate documentation using Gemini API
 """
 
-def main():
+def main_dep() -> None:
     # gits filename
     if len(sys.argv) > 1:
         filename = sys.argv[1]
@@ -39,6 +39,20 @@ def main():
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         raise
+
+def helpusage() -> str:
+    return""
+
+def main() -> None:
+    '''main loop'''
+    # get filename
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = input("Enter path to python file (Enter for test.py): ").strip() or "test.py"
+    
+    if filename in {"-h", "--help"}:
+        print("TODO: print help")
 
 if __name__ == "__main__":
     main()

@@ -9,22 +9,22 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 
-def generate():
+def generate(inputstr: str) -> str:
   client = genai.Client(
         api_key=input("API Key"),
   )
 
   model = "gemini-2.0-flash"
   contents = [
-      types.Content(
-          role="user",
-          parts=[
-              types.Part.from_text(
-                  text="""eJy1lVtvgjAUgH8OJWmW6bLHPTDUZYmXRUz2QIgpF10zoFhA479f2yMCgoQl8kLaw7l859J2gezZBGnE9zVsrD+Q7WCb8L2QaDpWC1fTHfx7YnF4Fvv0zZa7rR/sSB5maltZ69heo3carxK0lD7wHOk6Nnwf6XgpfSmBLjwKu+ycBNuEcBKBqQRJczfjxMsGpLFyty9NJBzRJDwPSLMQf/vi+PRI/WBAmAk99mVJ2CngA6J8sVPvmTnkhAdbzljL2DyGw1yh56fXLggvd4dFALEAGRV9EuuXzsLsxEFinJLwhin+J9PnDpksEs4DiRVfsOzpAcnYsjY6oCs6KatkEdcH3ZSyChi4amjDIb36c2SaHYlSl8XE8+gwic6z6W2mc5pmMo4aTadHiUY1Q/DU33rctIbilD4MC9lLVQoNW0iK7injGeMyDgVFaAkn8T4oAquIuERRHRA8yETGZoOKMEpZI0kSxH69k5ZVV7r2l7b0t/pI9DccXwwv4wGI65q1HJmusdl7D3v1vn9oqJpXgKt+bPJESG04y6rWoAH9gW+p08j5+kawm/fTqWQOOROtFLXmGnrRo29rNTfETRuH+P7bBsSzkDF+ucOkvuoD+KhYl2bFBdCSm/r1BzsrlVQ="""
-              ),
-          ],
-      ),
-  ]
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=inputstr
+                ),
+            ],
+        ),
+    ]
   tools = [
       types.Tool(code_execution=types.ToolCodeExecution),
   ]
@@ -38,7 +38,6 @@ def generate():
       system_instruction=[
           types.Part.from_text(
               text="""You are an expert Python documentation writer with deep knowledge of decoding and decrypting, code analysis, and AST interpretation.
-        
         You will be provided with a string of encoded text. Follow these steps:
         
         Step 1: Decode the Input String
@@ -129,19 +128,114 @@ def generate():
       ],
   )
 
-  for chunk in client.models.generate_content_stream(
-      model=model,
-      contents=contents,
-      config=generate_content_config,
-  ):
-    if not chunk.candidates or not chunk.candidates[0].content or not chunk.candidates[0].content.parts:
-      continue
-    if chunk.candidates[0].content.parts[0].text:
-      print(chunk.candidates[0].content.parts[0].text, end="")
-    if chunk.candidates[0].content.parts[0].executable_code:
-      print(chunk.candidates[0].content.parts[0].executable_code)
-    if chunk.candidates[0].content.parts[0].code_execution_result:
-      print(chunk.candidates[0].content.parts[0].code_execution_result)
+  response = []
 
+    for chunk in client.models.generate_content_stream(
+    model=model,
+    contents=contents,
+    config=generate_content_config,
+    ):
+        if not chunk.candidates or not chunk.candidates[0].content or not chunk.candidates[0].content.parts:
+            continue
+        if chunk.candidates[0].content.parts[0].text:
+            response.append(chunk.candidates[0].content.parts[0].text)
 
-generate()
+    prompt_tokens = client.models.count_tokens(
+        model=model,
+        contents=prompt,
+    ).total_tokens
+
+    response_tokens = client.models.count_tokens(
+        model=model,
+        contents=inputstr
+    ).total_tokens
+
+    print("\nToken Usage:")
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {response_tokens}")
+    print(f"Total tokens: {prompt_tokens + response_tokens}")
+    return response
+
+def analyze_code(compressed_ast: str) -> str:
+    '''analyzes code using gemini api'''
+    prompt = SYSTEM_PROMPT
+    response = generate(prompt, compressed_ast)
+
+    response_str = "".join(response)
+
+    return response_str
+
+def _analyze_code(compressed_ast: str) -> str:
+    """
+    ! DEPRECATED !
+    Analyze code using Gemini API and generate documentation
+    """
+    
+    # Configure API
+    API_KEY = os.getenv("GEMINI_API_KEY")
+    if API_KEY is None:
+        API_KEY = input("Input your Gemini API key: ")
+    else:
+        print("using api key in environment.")
+    genai.configure(api_key=API_KEY)
+    print("Generating documentation...")
+    # Configure generation parameters
+    generation_config = {
+        "temperature": 0,
+        "top_p": 0.55,
+        "max_output_tokens": 16384,
+        "tools": ""
+    }
+
+    # Initialize model
+    model = genai.GenerativeModel(
+        model_name="gemini-pro",
+        generation_config=generation_config # type: ignore
+    )
+
+    # Start chat and send decompressed AST
+    chat = model.start_chat()
+    
+    prompt = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=compressed_ast
+                ),
+            ],
+        ),
+    ]
+
+    # Count tokens in the prompt
+    prompt_tokens = model.count_tokens(prompt).total_tokens
+    
+    # Send message and get response
+    response = chat.send_message(prompt)
+    
+    # Count tokens in the response
+    response_tokens = model.count_tokens(response.text).total_tokens
+    
+    # Print token usage
+    print("\nToken Usage:")
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {response_tokens}")
+    print(f"Total tokens: {prompt_tokens + response_tokens}")
+    
+    return response.text
+
+def analyze(compressed_ast):
+    '''entry point'''
+    # Generate documentation
+    documentation = analyze_code(compressed_ast)
+    
+    # Save to file
+    with open("documentation.md", "w") as f:
+        f.write(documentation)
+    
+    print("Documentation generated and saved to documentation.md")
+
+if __name__ == "__main__":
+    p = Parser("main.py")
+    compressed_ast = p.parse()
+    analyze(compressed_ast)
