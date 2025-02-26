@@ -6,11 +6,15 @@ from parser import Parser
 from google import genai
 from google.genai import types
 from typing import List, Tuple
+from parser import REPLACEMENTS, REVREP
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-SYSTEM_PROMPT="""You are an expert Python documentation writer with deep knowledge of decoding, code analysis, and AST interpretation.
+revrep_items = [f"'{k}': '{v}'" for k, v in REVREP.items()]
+revrep_dict = "{" + ", ".join(revrep_items) + "}"
+
+SYSTEM_PROMPT=f"""You are an expert Python documentation writer with deep knowledge of decoding, code analysis, and AST interpretation.
 You will be provided with a string of encoded text. You are to follow the steps below strictly. 
 
 Step 1: Decode the encoded text
@@ -18,7 +22,7 @@ When you receive the encoded text, use the snipped below to decode it. Do NOT ge
 ```
 import base64, zlib, ast
 def unrep(s):
-    i = {'FV': 'FormattedValue', 'FD': 'FunctionDef', 'EX': 'ExceptHandler', 'IF': 'ImportFrom', 'AA': 'AnnAssign','ATT': 'Attribute', 'ARG': 'arguments', 'SS': 'Subscript', 'CO': 'Constant', 'CD': 'ClassDef', 'UO': 'UnaryOp','K': 'keyword', 'ST': 'Starred', 'R': 'Return', 'AS': 'Assign', 'I': 'Import', 'M': 'Module', 'AL': 'alias','S': 'Store', 'val': 'value', 'C': 'Call', 'E': 'Expr', 'N': 'Name', 'L': 'Load'}
+    i = {revrep_dict}
     for l, x in i.items():
         s = s.replace(l, x)
     return s
@@ -157,26 +161,33 @@ def generate(prompt: str) -> Tuple[str, str]:
             continue
         if chunk.candidates[0].content.parts[0].text:
             response.append(chunk.candidates[0].content.parts[0].text)
+    
+    response_str = "".join(response)
 
     print("Counting tokens...")
 
-    prompt_tokens = client.models.count_tokens(
-        model=model,
-        contents=prompt,
-    ).total_tokens
+    # For prompt tokens
+    prompt_content = [types.Content(
+        role="user", 
+        parts=[
+            types.Part.from_text(prompt)
+            ]
+    )]
+    prompt_tokens = client.models.count_tokens(model=model, contents=prompt_content).total_tokens
 
-    response_tokens = client.models.count_tokens(
-        model=model,
-        contents=prompt
-    ).total_tokens
+    # For response tokens
+    response_content = [types.Content(
+        role="model", parts=[
+            types.Part.from_text(response_str)
+        ]
+    )]
+    response_tokens = client.models.count_tokens(model=model, contents=response_content).total_tokens
 
     tokenusage: List[str] = []
     tokenusage.append("\nToken Usage:\n")
     tokenusage.append(f"Prompt tokens:               {prompt_tokens}\n")
     tokenusage.append(f"Response tokens:             {response_tokens}\n")
     tokenusage.append(f"Total tokens:                {prompt_tokens + response_tokens}\n")
-    
-    response_str = "".join(response)
     tokenusage_str = "".join(tokenusage)
 
     return response_str, tokenusage_str
@@ -194,8 +205,6 @@ if __name__ == "__main__":
     p = Parser("analyzer.py")
     compressed_ast, profiler = p.parse()
     documentation, tokenusage = analyze(compressed_ast)
-
-    # print(profiler.print())
 
     with open("documentation.md", "w") as file:
         file.writelines(documentation)
