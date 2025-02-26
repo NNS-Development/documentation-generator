@@ -227,7 +227,7 @@ def _analyze_code(compressed_ast: str) -> str:
     
     return response.text
 
-def main(compressed_ast):
+def analyze(compressed_ast):
     '''entry point'''
     # Generate documentation
     documentation = analyze_code(compressed_ast)
@@ -241,4 +241,4 @@ def main(compressed_ast):
 if __name__ == "__main__":
     p = Parser("main.py")
     compressed_ast = p.parse()
-    main(compressed_ast)
+    analyze(compressed_ast)
