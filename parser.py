@@ -1,7 +1,7 @@
 import ast
 import zlib
 import base64
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
     
 class OutputProfiler:
@@ -21,86 +21,50 @@ Total compression ratio:      {(self.original-self.compressed)/self.original:.1%
         )
 
 class Parser:
+    REPLACEMENTS = {
+            "FormattedValue": "FV",
+            "FunctionDef": "FD",
+            "ExceptHandler": "EX",
+            "ImportFrom": "IF",
+            "AnnAssign": "AA",
+            "Attribute": "ATT",
+            "arguments": "ARG",
+            "Subscript": "SS",
+            "Constant": "CO",
+            "ClassDef": "CD",
+            "UnaryOp": "UO",
+            "keyword": "K",
+            "Starred": "ST",
+            "Return": "R",
+            "Assign": "AS",
+            "Import": "I",
+            "Module": "M",
+            "alias": "AL",
+            "Store": "S",
+            "value": "val",
+            "Call": "C",
+            "Expr": "E",
+            "Name": "N",
+            "Load": "L"
+        }
+    REVREP = {v: k for k, v in REPLACEMENTS.items()}
+
     def __init__(self, filename) -> None:
         self.file = filename
         self.tree: Optional[ast.AST] = None
     
     @staticmethod
-    def replacek(s: str) -> str:
-        '''
-        replaces keywords with shortened characters
-        '''
-        replacements = {
-            "FormattedValue": "FV",
-            "FunctionDef": "FD",
-            "ExceptHandler": "EX",
-            "ImportFrom": "IF",
-            "AnnAssign": "AA",
-            "Attribute": "ATT",
-            "arguments": "ARG",
-            "Subscript": "SS",
-            "Constant": "CO",
-            "ClassDef": "CD",
-            "UnaryOp": "UO",
-            "keyword": "K",
-            "Starred": "ST",
-            "Return": "R",
-            "Assign": "AS",
-            "Import": "I",
-            "Module": "M",
-            "alias": "AL",
-            "Store": "S",
-            "value": "val",
-            "Call": "C",
-            "Expr": "E",
-            "Name": "N",
-            "Load": "L"
-        }
-    
-        # does the actual replacement
+    def replacek(s: str, replacements: Dict[str, str]) -> str:
+        '''replaces keywords with shortened characters'''
         for long, short in replacements.items():
             s = s.replace(long, short)
-            
         return s
     
     @staticmethod
-    def unreplacek(s: str) -> str:
-        '''
-        replaces shortened characters with original keywords
-        '''
-        replacements = {
-            "FormattedValue": "FV",
-            "FunctionDef": "FD",
-            "ExceptHandler": "EX",
-            "ImportFrom": "IF",
-            "AnnAssign": "AA",
-            "Attribute": "ATT",
-            "arguments": "ARG",
-            "Subscript": "SS",
-            "Constant": "CO",
-            "ClassDef": "CD",
-            "UnaryOp": "UO",
-            "keyword": "K",
-            "Starred": "ST",
-            "Return": "R",
-            "Assign": "AS",
-            "Import": "I",
-            "Module": "M",
-            "alias": "AL",
-            "Store": "S",
-            "value": "val",
-            "Call": "C",
-            "Expr": "E",
-            "Name": "N",
-            "Load": "L"
-        }
-        
-        revreplacements = {v: k for k, v in replacements.items()}
-    
-        # unreplaces
-        for long, short in revreplacements.items():
+    def unreplacek(s: str, revrep: Dict[str, str]) -> str:
+        '''replaces shortened characters with original keywords'''
+        for long, short in revrep.items():
             s = s.replace(long, short)
-            
         return s
     
     def uncomp(self) -> str:
@@ -120,14 +84,9 @@ class Parser:
             raise RuntimeError("ast is empty. have you run parsefile() yet?")
         
         # ballpark figures lol
-        # removes unnecessary whitespace and attributes (decreases length of output by ~71%)
-        compast: str = ast.dump(self.tree, annotate_fields=False, include_attributes=False, indent=0)
-        
-        # remove newlines + whitespace (decreases length by ~7%)
-        compast = "".join(compast.split())
-        
-        # replace keywords with shorter versions (decreases length by ~40%)
-        compast = self.replacek(compast)
+        compast: str = ast.dump(self.tree, annotate_fields=False, include_attributes=False, indent=0) # removes unnecessary whitespace and attributes (decreases length of output by ~71%)
+        compast = "".join(compast.split()) # remove newlines + whitespace (decreases length by ~7%)
+        compast = self.replacek(compast, self.REPLACEMENTS) # replace keywords with shorter versions (decreases length by ~40%)
         
         return compast
     
@@ -145,15 +104,11 @@ class Parser:
             include_attributes=False,
             indent=0
         )
-        # no whitespace
-        aststr = "".join(aststr.split())
-        
-        # replace keywords with shorter versions (decreases length by ~40%)
-        aststr = self.replacek(aststr)
-        
-        # base64 compressed bytes
-        compbytes = zlib.compress(aststr.encode('utf-8'))
-        encstr = base64.b64encode(compbytes).decode('utf-8')
+
+        aststr = "".join(aststr.split()) # no whitespace
+        aststr = self.replacek(aststr, self.REPLACEMENTS) # replace keywords with shorter versions (decreases length by ~40%)
+        compbytes = zlib.compress(aststr.encode('utf-8')) # compress using zlib
+        encstr = base64.b64encode(compbytes).decode('utf-8') # base64 compressed bytes
         
         return encstr
 
@@ -164,16 +119,10 @@ class Parser:
         with open(self.file, "r") as f:
             source: str = f.read()
         
-        self.tree = ast.parse(source)
-
-        profiler.original = len(self.uncomp())
-
-        if zlibc:
-            data = self.zlibcomp()
-        else:
-            data = self.comp()
-
-        profiler.compressed = len(data)
+        self.tree = ast.parse(source) # get the ast
+        profiler.original = len(self.uncomp()) # get the original tree's length
+        data = self.zlibcomp() if zlibc else self.comp() # use appropriate compression type
+        profiler.compressed = len(data) # set compressed length
 
         return data, profiler
     
