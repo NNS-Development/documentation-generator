@@ -165,7 +165,8 @@ def analyze_code(compressed_ast: str) -> str:
     response = generate(prompt, compressed_ast)
 
     response_str = "".join(response)
-    response_str = response_str[11:-3].strip()
+    response_str = response_str[11:-3].strip() # doesnt work. 
+    # TODO: try to remove top part by finding everything after '# Project overview' fr
 
     return response_str
 
