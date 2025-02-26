@@ -137,11 +137,6 @@ def generate(prompt: str, inputstr: str) -> List[str]:
             continue
         if chunk.candidates[0].content.parts[0].text:
             response.append(chunk.candidates[0].content.parts[0].text)
-        # this part prints useless stuff
-        # if chunk.candidates[0].content.parts[0].executable_code:
-        #     print(chunk.candidates[0].content.parts[0].executable_code)
-        # if chunk.candidates[0].content.parts[0].code_execution_result:
-        #     print(chunk.candidates[0].content.parts[0].code_execution_result)
 
     prompt_tokens = client.models.count_tokens(
         model=model,
