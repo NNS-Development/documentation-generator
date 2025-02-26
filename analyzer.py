@@ -1,17 +1,20 @@
 import warnings
 import os
+import base64
+import zlib
 from parser import Parser
 from google import genai
 from google.genai import types
+from typing import List, Tuple
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-SYSTEM_PROMPT="""You are an expert Python documentation writer with deep knowledge of decoding and decrypting, code analysis, and AST interpretation.
-You will be provided with a string of encoded text. Follow these steps:
+SYSTEM_PROMPT="""You are an expert Python documentation writer with deep knowledge of decoding, code analysis, and AST interpretation.
+You will be provided with a string of encoded text. You are to follow the steps below strictly. 
 
-Step 1: Decode the Input String
-Use the following Python snippet to decode the string:
+Step 1: Decode the encoded text
+When you receive the encoded text, use the snipped below to decode it. Do NOT generate documentation for this. :
 ```
 import base64, zlib, ast
 def unrep(s):
@@ -22,15 +25,17 @@ def unrep(s):
 def decompress(c):
     return ast.unparse(ast.parse(unrep(zlib.decompress(base64.b64decode(c)).decode('utf-8'))))
 ```
-You must decode and analyze the AST but do **not** output the decoded content directly.
+
+After running `decompress` on the encoded text, the returned value will be a python AST. 
+Proceed on to the next step. 
 
 Step 2: Analyze the AST
-- Understand how the code works by inspecting its structure.
+- Using the AST from step 1, analyze and understand how the code works by inspecting its structure.
 - Identify functions, classes, methods, key algorithms, and dependencies.
 - Verify correctness and highlight any unusual patterns.
 
-Step 3: Generate Comprehensive Documentation
-Create well-structured documentation using the following format:
+Step 3: Generate comprehensive documentation in markdown. 
+Use your analysis of the code to create a well-structured documentation using the following format:
 
 1. Project Overview
 - Purpose and functionality of the code
@@ -85,32 +90,50 @@ Additional Guidelines:
 - Infer and document any implicit behaviors or patterns.
 - If certain aspects cannot be determined from the AST alone, clearly note this in the documentation.
 
-Focus only on generating documentation and avoid assumptions about the AST structure beyond what is explicitly provided.
+Focus only on generating documentation in well-formatted markdown and avoid assumptions about the AST structure beyond what is explicitly provided.
 """
 
-def generate(prompt: str) -> str:
+def decompress_ast(compressed: str) -> str:
+    """Decompress a base64+zlib compressed AST string"""
+    decoded = base64.b64decode(compressed)
+    decompressed = zlib.decompress(decoded)
+    return Parser.unreplacek(decompressed.decode('utf-8'))
+
+def generate(prompt: str) -> Tuple[str, str]:
+    print("Searching for your API key...")
+    API_KEY = os.environ.get("GEMINI_API_KEY")
+    if API_KEY is None:
+        print("No API key found.")
+        API_KEY = input("Input your Google Gemini API key: ")
+    else:
+        print("Using API key in environment.")
+
+    print("Initializing model...")
+
     client = genai.Client(
-            api_key=input("API Key"),
+        api_key=API_KEY,
     )
 
     model = "gemini-2.0-flash"
+
     contents = [
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(
-                        text=prompt
-                    ),
-                ],
-            ),
-        ]
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=prompt
+                ),
+            ],
+        ),
+    ]
+    
     tools = [
         types.Tool(code_execution=types.ToolCodeExecution),
     ]
+
     generate_content_config = types.GenerateContentConfig(
         temperature=0,
-        top_p=0.4,
-        top_k=65,
+        top_p=0.5,
         max_output_tokens=8192,
         tools=tools,
         response_mime_type="text/plain",
@@ -120,6 +143,8 @@ def generate(prompt: str) -> str:
             ),
         ],
     )
+
+    print("Generating documentation using Gemini's API...")
 
     response = []
 
@@ -133,6 +158,8 @@ def generate(prompt: str) -> str:
         if chunk.candidates[0].content.parts[0].text:
             response.append(chunk.candidates[0].content.parts[0].text)
 
+    print("Counting tokens...")
+
     prompt_tokens = client.models.count_tokens(
         model=model,
         contents=prompt,
@@ -143,91 +170,34 @@ def generate(prompt: str) -> str:
         contents=prompt
     ).total_tokens
 
-    print("\nToken Usage:")
-    print(f"Prompt tokens: {prompt_tokens}")
-    print(f"Response tokens: {response_tokens}")
-    print(f"Total tokens: {prompt_tokens + response_tokens}")
-    return "".join(response)
-
-def analyze_code(compressed_ast: str) -> str:
-    '''analyzes code using gemini api'''
-    response = generate(compressed_ast)
-
+    tokenusage: List[str] = []
+    tokenusage.append("\nToken Usage:\n")
+    tokenusage.append(f"Prompt tokens:               {prompt_tokens}\n")
+    tokenusage.append(f"Response tokens:             {response_tokens}\n")
+    tokenusage.append(f"Total tokens:                {prompt_tokens + response_tokens}\n")
+    
     response_str = "".join(response)
+    tokenusage_str = "".join(tokenusage)
 
-    return response_str
+    return response_str, tokenusage_str
 
-def _analyze_code(compressed_ast: str) -> str:
-    """
-    ! DEPRECATED !
-    Analyze code using Gemini API and generate documentation
-    """
-    
-    # Configure API
-    API_KEY = os.getenv("GEMINI_API_KEY")
-    if API_KEY is None:
-        API_KEY = input("Input your Gemini API key: ")
-    else:
-        print("using api key in environment.")
-    genai.configure(api_key=API_KEY)
-    print("Generating documentation...")
-    # Configure generation parameters
-    generation_config = {
-        "temperature": 0,
-        "top_p": 0.55,
-        "max_output_tokens": 16384,
-        "tools": ""
-    }
-
-    # Initialize model
-    model = genai.GenerativeModel(
-        model_name="gemini-pro",
-        generation_config=generation_config # type: ignore
-    )
-
-    # Start chat and send decompressed AST
-    chat = model.start_chat()
-    
-    prompt = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(
-                    text=compressed_ast
-                ),
-            ],
-        ),
-    ]
-
-    # Count tokens in the prompt
-    prompt_tokens = model.count_tokens(prompt).total_tokens
-    
-    # Send message and get response
-    response = chat.send_message(prompt)
-    
-    # Count tokens in the response
-    response_tokens = model.count_tokens(response.text).total_tokens
-    
-    # Print token usage
-    print("\nToken Usage:")
-    print(f"Prompt tokens: {prompt_tokens}")
-    print(f"Response tokens: {response_tokens}")
-    print(f"Total tokens: {prompt_tokens + response_tokens}")
-    
-    return response.text
-
-def analyze(compressed_ast):
+def analyze(compressed_ast: str) -> Tuple[str, str]:
     '''entry point'''
     # Generate documentation
-    documentation = analyze_code(compressed_ast)
+    print(f"Compressed code: {compressed_ast}")
+    print("Analyzing code...")
+    documentation, tokenusage = generate(compressed_ast)
     
-    # Save to file
-    with open("documentation.md", "w") as f:
-        f.write(documentation)
-    
-    print("Documentation generated and saved to documentation.md")
+    return documentation, f"{tokenusage}\n\nDocumentation generated and saved to documentation.md"
 
 if __name__ == "__main__":
-    p = Parser("main.py")
-    compressed_ast = p.parse()
-    analyze(compressed_ast)
+    p = Parser("analyzer.py")
+    compressed_ast, profiler = p.parse()
+    documentation, tokenusage = analyze(compressed_ast)
+
+    # print(profiler.print())
+
+    with open("documentation.md", "w") as file:
+        file.writelines(documentation)
+
+    print(tokenusage)
