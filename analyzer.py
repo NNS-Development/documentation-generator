@@ -78,6 +78,7 @@ For each function:
 Format the documentation in clean, well-structured markdown with appropriate headers, code blocks, and lists. Use ```python for code examples.
 Based on the AST structure, infer and document any implicit behaviors or patterns. If certain aspects cannot be determined from the AST alone, note this in the documentation.
 Try to keep code snippets short. 
+Only output the documentation.
 Encoded text to analyze:"""
 
 def decompress_ast(compressed: str) -> str:
@@ -86,12 +87,14 @@ def decompress_ast(compressed: str) -> str:
     decompressed = zlib.decompress(decoded)
     return Parser.unreplacek(decompressed.decode('utf-8'))
 
-def generate(inputstr: str) -> List[str]:
+def generate(prompt: str, inputstr: str) -> List[str]:
+    print("Getting API key from environment...")
     API_KEY = os.environ.get("GEMINI_API_KEY")
     if API_KEY is None:
+        print("No API key found.")
         API_KEY = input("Input your Gemini API key: ")
     else:
-        print("using api key in environment.")
+        print("Using API key in environment.")
         
     client = genai.Client(
         api_key=API_KEY,
@@ -119,11 +122,13 @@ def generate(inputstr: str) -> List[str]:
         response_mime_type="text/plain",
         system_instruction=[
             types.Part.from_text(
-                text=SYSTEM_PROMPT
+                text=prompt
             ),
         ],
     )
+
     response = []
+
     for chunk in client.models.generate_content_stream(
     model=model,
     contents=contents,
@@ -133,19 +138,37 @@ def generate(inputstr: str) -> List[str]:
             continue
         if chunk.candidates[0].content.parts[0].text:
             response.append(chunk.candidates[0].content.parts[0].text)
-        if chunk.candidates[0].content.parts[0].executable_code:
-            print(chunk.candidates[0].content.parts[0].executable_code)
-        if chunk.candidates[0].content.parts[0].code_execution_result:
-            print(chunk.candidates[0].content.parts[0].code_execution_result)
-    
+        # this part prints useless stuff
+        # if chunk.candidates[0].content.parts[0].executable_code:
+        #     print(chunk.candidates[0].content.parts[0].executable_code)
+        # if chunk.candidates[0].content.parts[0].code_execution_result:
+        #     print(chunk.candidates[0].content.parts[0].code_execution_result)
+
+    prompt_tokens = client.models.count_tokens(
+        model=model,
+        contents=prompt,
+    ).total_tokens
+
+    response_tokens = client.models.count_tokens(
+        model=model,
+        contents=inputstr
+    ).total_tokens
+
+    print("\nToken Usage:")
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {response_tokens}")
+    print(f"Total tokens: {prompt_tokens + response_tokens}")
     return response
 
 def analyze_code(compressed_ast: str) -> str:
     '''analyzes code using gemini api'''
     prompt = SYSTEM_PROMPT
-    response = generate(compressed_ast)
+    response = generate(prompt, compressed_ast)
 
-    return ""
+    response_str = "".join(response)
+    response_str = response_str[11:-3].strip()
+
+    return response_str
 
 def _analyze_code(compressed_ast: str) -> str:
     """
