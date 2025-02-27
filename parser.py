@@ -50,14 +50,14 @@ class OutputProfiler:
         self.original: int = 0
         self.compressed: int = 0
 
-    def print(self) -> str:
+    def print(self) -> None:
         compression_ratio = (self.original - self.compressed) / self.original if self.original > 0 else 0
-        return (
+        print(
             f"\nCompressed AST sizes:\n"
             f"Original:                     {self.original} characters\n"
             f"Compressed:                   {self.compressed} characters\n"
             f"Compression savings:          {self.original - self.compressed} characters\n"
-            f"Total compression ratio:      {compression_ratio:.1%}"
+            f"Total compression ratio:      {compression_ratio:.1%}\n"
         )
 
 
@@ -167,28 +167,27 @@ class Parser:
         data = self.zlibcomp() if zlibc else self.comp()
         profiler.compressed = len(data)
 
-        print()
-        print(profiler.print())
-        print()
+        profiler.print()
         
         return data, profiler
 
 
 if __name__ == "__main__":
     p = Parser("parser.py")
+    
+    print("Generating normal compression...")
     nozlib, nozlibdat = p.parse(False)
+    
+    print("\nGenerating zlib compression...")
     wzlib, wzlibdat = p.parse()
 
-    print("\nNormal compression: ")
-    print(nozlib)
+    print("\nCompression comparison:")
+    print(f"Normal compression:  {len(nozlib)} characters")
+    print(f"Zlib compression:    {len(wzlib)} characters")
+    print(f"Difference:          {nozlibdat.compressed - wzlibdat.compressed} characters")
     
-    print("\nZlib compressed: ")
-    print(wzlib)
+    print("\nNormal compression example:")
+    print(nozlib[:100] + "..." if len(nozlib) > 100 else nozlib)
     
-    print("\nNormal compression stats:")
-    print(nozlibdat.print())
-    
-    print("\nZlib compression stats:")
-    print(wzlibdat.print())
-    
-    print(f"\nCompression difference: {nozlibdat.compressed - wzlibdat.compressed} characters")
+    print("\nZlib compression example:")
+    print(wzlib[:100] + "..." if len(wzlib) > 100 else wzlib)

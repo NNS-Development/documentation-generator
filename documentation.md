@@ -1,157 +1,111 @@
 # Project Overview
 
-This project provides a tool for automatically generating documentation for Python code using Google's Gemini API. It takes compressed Python AST code as input, decompresses it, and then uses the Gemini API to generate comprehensive documentation in Markdown format.
-
-- **Purpose and Functionality:** The primary goal is to automate the documentation process for Python projects by leveraging the capabilities of large language models.
-- **High-level Architecture:** The code consists of several functions that handle different stages of the documentation generation process: decompressing the AST, interacting with the Gemini API, and formatting the output. It uses the `parser` module for AST manipulation and `google.genai` for interacting with the Gemini API.
+- **Purpose and Functionality:** This code aims to automatically generate documentation for Python code using Google's Gemini API. It takes compressed Python code as input, decompresses it, analyzes its structure, and then uses the Gemini API to generate comprehensive documentation in Markdown format.
+- **High-level Architecture/Design Patterns Used:** The code follows a modular design, separating the concerns of code decompression, API key retrieval, documentation generation, and file saving. It uses the `ast` module for code analysis and Google's `genai` library for interacting with the Gemini API.
 - **Key Features:**
-    - Decompresses compressed Python AST code.
-    - Interacts with Google's Gemini API to generate documentation.
-    - Formats the generated documentation in Markdown.
-    - Provides token usage statistics.
+    - Decompresses base64 and zlib compressed Python code.
+    - Retrieves API keys from environment variables or user input.
+    - Uses Google's Gemini API to generate documentation.
+    - Calculates and displays token usage for the Gemini API.
+    - Saves the generated documentation to a Markdown file.
 
-# Technical Documentation
+## Technical Documentation
 
-## Classes
+**Functions:**
 
-There are no classes defined in this code.
-
-## Functions
-
-### `decompress_ast(compressed: str) -> str`
-
-- **Purpose:** Decompresses a base64 and zlib compressed string representing a Python AST and returns the unparsed Python code.
-- **Parameters:**
-    - `compressed` (str): The compressed string.
-- **Return Value:**
-    - `str`: The decompressed Python code.
-- **Exceptions Raised:**
-    - `ValueError`: If decompression fails due to `binascii.Error` or `zlib.error`.
-- **Example:**
-```python
-compressed_code = "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"
-decompressed_code = decompress_ast(compressed_code)
-print(decompressed_code)
-```
-
-### `get_api_key() -> str`
-
-- **Purpose:** Retrieves the Google Gemini API key from the environment variables or prompts the user to enter it.
-- **Parameters:**
-    - None
-- **Return Value:**
-    - `str`: The API key.
-- **Side Effects:**
-    - Prints messages to the console.
-    - May prompt the user for input.
-- **Example:**
-```python
-api_key = get_api_key()
-print(f"API Key: {api_key}") # The actual key will not be printed, but a message will be shown.
-```
-
-### `generate(prompt: str) -> Tuple[str, str]`
-
-- **Purpose:** Generates documentation using Google's Gemini API based on the provided prompt.
-- **Parameters:**
-    - `prompt` (str): The prompt to send to the Gemini API.
-- **Return Value:**
-    - `Tuple[str, str]`: A tuple containing the generated documentation and token usage statistics.
-- **Side Effects:**
-    - Prints messages to the console.
-    - Interacts with the Google Gemini API.
-- **Example:**
-```python
-prompt = "Write documentation for a function that adds two numbers."
-documentation, token_usage = generate(prompt)
-print(documentation)
-print(token_usage)
-```
-
-### `analyze(compressed_ast: str) -> Tuple[str, str]`
-
-- **Purpose:** Analyzes a compressed AST and generates documentation.
-- **Parameters:**
-    - `compressed_ast` (str): The compressed AST code.
-- **Return Value:**
-    - `Tuple[str, str]`: A tuple containing the generated documentation and token usage statistics.
-- **Side Effects:**
-    - Prints messages to the console.
-    - Calls the `generate` function.
-- **Example:**
-```python
-compressed_ast = "some_compressed_ast_code"
-documentation, token_usage = analyze(compressed_ast)
-print(documentation)
-print(token_usage)
-```
-
-# Dependencies
-
-- os
-- zlib
-- base64
-- getpass
-- binascii
-- warnings
-- typing
-- parser
-- google
-- google.genai
-
-# Implementation Details
-
-- **Key Algorithms:**
-    - The code uses zlib and base64 for compression and decompression of the AST.
-    - It uses Google's Gemini API for generating documentation from the decompressed AST.
-- **Important Design Decisions:**
-    - The code uses a system prompt to guide the Gemini API in generating documentation.
-    - It uses streaming to handle large responses from the Gemini API.
-- **Performance Considerations:**
-    - The code uses token counting to track the usage of the Gemini API.
-
-# Usage Guide
-
-1.  **Installation Instructions:**
-    - Install the required packages: `pip install google-generativeai`
-2.  **Configuration Requirements:**
-    - Set the `GEMINI_API_KEY` environment variable with your Google Gemini API key.
-3.  **Code Examples:**
+- **`decompress_ast(compressed: str) -> str`**
+    - **Purpose:** Decompresses a base64 and zlib compressed string representing Python code.
+    - **Parameters:**
+        - `compressed` (str): The compressed string.
+    - **Return Value:** The decompressed Python code as a string.
+    - **Exceptions Raised:**
+        - `ValueError`: If decompression fails due to `binascii.Error` or `zlib.error`.
+    - **Example:**
     ```python
-    import os
-    import zlib
-    import base64
-    import getpass
-    import binascii
-    import warnings
-    from typing import Tuple
-    from parser import Parser, REVREP
-    import google.genai as genai
-    from google.genai import types
-
-    # (Define the functions decompress_ast, get_api_key, generate, and analyze as in the decompressed code)
-
-    if __name__ == '__main__':
-        # Create a dummy Parser object and compressed AST for demonstration
-        class DummyParser:
-            def parse(self):
-                return "compressed_ast_code", "profiler_data"
-        p = DummyParser()
-        compressed_ast = "compressed_ast_code" # Replace with actual compressed AST
-        documentation, tokenusage = analyze(compressed_ast)
-        print(documentation)
-        print(tokenusage)
+    compressed_code = "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"
+    decompressed_code = decompress_ast(compressed_code)
+    print(decompressed_code)
     ```
-4.  **Best Practices:**
-    - Ensure that the `GEMINI_API_KEY` environment variable is set before running the code.
-    - Use a descriptive prompt to guide the Gemini API in generating documentation.
 
-# Notes and Warnings
+- **`get_api_key() -> str`**
+    - **Purpose:** Retrieves the Google Gemini API key from the environment variables or prompts the user for input.
+    - **Parameters:** None
+    - **Return Value:** The API key as a string.
+    - **Side Effects:** Prints messages to the console.
+    - **Example:**
+    ```python
+    api_key = get_api_key()
+    print(f"API Key: {'*' * len(api_key)}") # Mask the API key for security
+    ```
+
+- **`generate(prompt: str) -> str`**
+    - **Purpose:** Generates documentation using Google's Gemini API based on the given prompt.
+    - **Parameters:**
+        - `prompt` (str): The prompt to send to the Gemini API.
+    - **Return Value:** The generated documentation as a string.
+    - **Side Effects:** Prints messages to the console, interacts with the Gemini API.
+    - **Example:**
+    ```python
+    prompt = "Write documentation for a function that adds two numbers."
+    documentation = generate(prompt)
+    print(documentation)
+    ```
+
+- **`analyze(compressed_ast: str) -> str`**
+    - **Purpose:** Analyzes compressed Python code and generates documentation.
+    - **Parameters:**
+        - `compressed_ast` (str): The compressed Python code.
+    - **Return Value:** The generated documentation as a string.
+    - **Side Effects:** Prints messages to the console.
+    - **Example:**
+    ```python
+    compressed_code = "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"
+    documentation = analyze(compressed_code)
+    print(documentation)
+    ```
+
+## Dependencies
+
+- **os:** For environment variable access.
+- **zlib:** For data compression and decompression.
+- **base64:** For encoding and decoding data.
+- **getpass:** For secure password input.
+- **binascii:** For converting between binary and ASCII.
+- **warnings:** For filtering warnings.
+- **parser:** A custom module (likely containing `Parser` and `REVREP`).
+- **google.genai:** For interacting with the Gemini API.
+- **google.genai.types:** For data types used by the Gemini API.
+
+## Implementation Details
+
+- **Key Algorithms Explained:**
+    - **Decompression:** The `decompress_ast` function uses `base64.b64decode` to decode the base64 encoded string and `zlib.decompress` to decompress the zlib compressed data.
+    - **Documentation Generation:** The `generate` function uses Google's Gemini API to generate documentation based on a given prompt. It sets up the API client, defines the model, creates content and tool configurations, and then sends the prompt to the API. The response is then processed and returned as a string.
+- **Important Design Decisions:**
+    - The code uses a modular design, separating the concerns of code decompression, API key retrieval, documentation generation, and file saving.
+    - The code uses Google's Gemini API to generate documentation, which allows for high-quality and comprehensive documentation.
+- **Performance Considerations:**
+    - The code uses streaming to handle large responses from the Gemini API.
+    - The code calculates and displays token usage for the Gemini API, which can be used to optimize performance and cost.
+
+## Usage Guide
+
+- **Installation Instructions:**
+    1. Install the required packages: `pip install google-generativeai`
+    2. Ensure you have a Google Gemini API key.
+- **Configuration Requirements:**
+    1. Set the `GEMINI_API_KEY` environment variable to your Google Gemini API key, or be prepared to enter it when prompted.
+- **Code Examples for Common Use Cases:**
+    - **Generating documentation for a Python file:**
+    ```bash
+    python analyzer.py
+    ```
+    This will parse and compress the `analyzer.py` file, send it to the Gemini API for documentation generation, and save the output to `documentation.md`.
+
+## Notes and Warnings
 
 - **Known Limitations:**
-    - The quality of the generated documentation depends on the quality of the prompt and the capabilities of the Gemini API.
-- **Common Pitfalls:**
-    - Ensure that the compressed AST code is valid.
-    - Handle API rate limits and errors gracefully.
+    - The quality of the generated documentation depends on the quality of the Gemini API.
+    - The code may not be able to handle all types of Python code.
 - **Security Considerations:**
-    - Store the Gemini API key securely and avoid exposing it in the code.
+    - The API key should be stored securely and not be exposed in the code. It is recommended to use environment variables to store the API key.
