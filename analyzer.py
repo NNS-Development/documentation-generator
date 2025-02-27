@@ -1,12 +1,14 @@
-import warnings
 import os
-import base64
 import zlib
+import base64
+import getpass
+import binascii
+import warnings
 from parser import Parser
 from google import genai
 from google.genai import types
 from typing import List, Tuple
-from parser import REPLACEMENTS, REVREP
+from parser import REVREP
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -98,17 +100,20 @@ Focus only on generating documentation in well-formatted markdown and avoid assu
 """
 
 def decompress_ast(compressed: str) -> str:
-    """Decompress a base64+zlib compressed AST string"""
-    decoded = base64.b64decode(compressed)
-    decompressed = zlib.decompress(decoded)
-    return Parser.unreplacek(decompressed.decode('utf-8'))
+    try:
+        decoded = base64.b64decode(compressed)
+        decompressed = zlib.decompress(decoded)
+        return Parser.unreplacek(decompressed.decode('utf-8'))
+    except (binascii.Error, zlib.error) as e:
+        raise ValueError(f"Decompression failed: {e}")
 
 def generate(prompt: str) -> Tuple[str, str]:
     print("Searching for your API key...")
     API_KEY = os.environ.get("GEMINI_API_KEY")
     if API_KEY is None:
         print("No API key found.")
-        API_KEY = input("Input your Google Gemini API key: ")
+        print("Input your Google Gemini API key. (It will not be displayed)")
+        API_KEY = getpass.getpass("> ")
     else:
         print("Using API key in environment.")
 

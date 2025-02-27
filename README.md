@@ -3,7 +3,8 @@ this is an automatic documentation generator using generative ai made in python.
 this should not be used in production-ready apps. it is not a replacement for actual humans.  
 
 ## IMPORTANT NOTES
-this CAN use a HUGE amount of tokens if your codebase is big. PLEASE PLEASE DO NOT use this on actual projects.   
+the encryption process can change your code. 
+this CAN use a HUGE amount of tokens if your codebase is big. PLEASE DO NOT use this on actual projects.   
 this is just a proof of concept and is NOT a finalized product.  
 
 ## how do i use this?

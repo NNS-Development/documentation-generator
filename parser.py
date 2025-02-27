@@ -1,8 +1,11 @@
+import re
 import ast
+import sys
 import zlib
 import base64
 from typing import Optional, Tuple, Dict
 
+# TODO: use special characters for the replacements so that actual code is not changed
 REPLACEMENTS = {
         "FormattedValue": "FV",
         "FunctionDef": "FD",
@@ -55,17 +58,13 @@ class Parser:
     
     @staticmethod
     def replacek(s: str, replacements: Dict[str, str]) -> str:
-        '''replaces keywords with shortened characters'''
-        for long, short in replacements.items():
-            s = s.replace(long, short)
-        return s
-    
+        pattern = re.compile(r'\b(' + '|'.join(map(re.escape, replacements.keys())) + r')\b')
+        return pattern.sub(lambda x: replacements[x.group()], s)
+
     @staticmethod
-    def unreplacek(s: str, revrep: Dict[str, str]=REVREP) -> str:
-        '''replaces shortened characters with original keywords'''
-        for long, short in revrep.items():
-            s = s.replace(long, short)
-        return s
+    def unreplacek(s: str, revrep: Dict[str, str] = REVREP) -> str:
+        pattern = re.compile(r'\b(' + '|'.join(map(re.escape, revrep.keys())) + r')\b')
+        return pattern.sub(lambda x: revrep[x.group()], s)
     
     def uncomp(self) -> str:
         '''prints the ast in an uncompressed format'''
@@ -116,10 +115,20 @@ class Parser:
         '''entry point'''
         profiler = OutputProfiler()
 
-        with open(self.file, "r") as f:
-            source: str = f.read()
+        try:
+            with open(self.file, "r") as f:
+                source: str = f.read()
+        except FileNotFoundError:
+            print(f"{self.file} is not a valid file path.")
+            sys.exit(1)
+        except IOError as e:
+            print(f"Unable to read file {self.file}: {e}")
         
-        self.tree = ast.parse(source) # get the ast
+        try:
+            self.tree = ast.parse(source) # get the ast
+        except SyntaxError as e:
+            print(f"Unable to parse syntax: {e}")
+
         profiler.original = len(self.uncomp()) # get the original tree's length
         data = self.zlibcomp() if zlibc else self.comp() # use appropriate compression type
         profiler.compressed = len(data) # set compressed length
