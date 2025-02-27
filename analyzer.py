@@ -3,17 +3,11 @@ import zlib
 import base64
 import getpass
 import binascii
-import warnings
-from typing import Tuple
 from parser import Parser, REVREP
 
 # API imports
 from google import genai
 from google.genai import types
-
-# Suppress GRPC warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
 Analyzer module for the documentation generator.
@@ -24,7 +18,6 @@ uses gemini's api to generate documentation
 _revrep_items = [f"'{k}': '{v}'" for k, v in REVREP.items()]
 _revrep_dict = "{" + ", ".join(_revrep_items) + "}"
 
-# System prompt for the Gemini model
 SYSTEM_PROMPT = f"""You are an expert Python documentation writer with deep knowledge of decoding, code analysis, and AST interpretation.
 You will be provided with a string of encoded text. You are to follow the steps below strictly. 
 
@@ -130,14 +123,14 @@ def get_api_key() -> str:
     return api_key
 
 
-def generate(prompt: str) -> Tuple[str, str]:
+def generate(prompt: str) -> str:
     """
     Generate documentation using Google's Gemini API.
     """
-    print("Searching for your API key...")
+    print("Setting up Gemini API...")
     api_key = get_api_key()
-    print()
-    print("Initializing model...")
+    
+    # Initialize client and model
     client = genai.Client(api_key=api_key)
     model = "gemini-2.0-flash"
 
@@ -181,7 +174,8 @@ def generate(prompt: str) -> Tuple[str, str]:
     
     response_str = "".join(response_chunks)
 
-    print("Counting tokens...")
+    # Calculate token usage
+    print("Calculating token usage...")
     prompt_content = [
         types.Content(
             role="user", 
@@ -210,36 +204,45 @@ def generate(prompt: str) -> Tuple[str, str]:
         f"Response tokens:             {response_tokens}\n",
         f"Total tokens:                {prompt_tokens + response_tokens}\n"
     ]
+
+    tokenusagestr = "".join(tokenusage)
+
+    print(tokenusagestr)
     
-    return response_str, "".join(tokenusage)
+    return response_str
 
 
-def analyze(compressed_ast: str) -> Tuple[str, str]:
+def analyze(compressed_ast: str) -> str:
     """
-    Analyze a compressed AST and generate documentation.
+    Analyze and generate documentation.
     """
-    if len(compressed_ast) > 80: # truncate output
+    if len(compressed_ast) > 80: 
         preview = compressed_ast[:77] + "..."
     else:
         preview = compressed_ast
         
-    print(f"Compressed code: {preview}")
-    print()
-    print("Analyzing code and generating documentation...")
-    print()
-    documentation, tokenusage = generate(compressed_ast)
+    print(f"Compressed code: {preview}\n")
     
-    return documentation, tokenusage
+    # Generate documentation from the compressed AST
+    print("Analyzing code structure and generating documentation...")
+    documentation = generate(compressed_ast)
+
+    return documentation
 
 
 if __name__ == "__main__":
+    # Parse and compress this file
+    print("Parsing and compressing analyzer.py...")
     p = Parser("analyzer.py")
     compressed_ast, profiler = p.parse()
-    documentation, tokenusage = analyze(compressed_ast)
+    
+    # Generate documentation
+    documentation = analyze(compressed_ast)
 
+    # Save output to file
+    print("Saving documentation to file...")
     with open("documentation.md", "w", encoding="utf-8") as file:
         file.writelines(documentation)
 
-    print(tokenusage)
-    print()
+    # Display token usage and completion message
     print("Documentation generated and saved to documentation.md")
