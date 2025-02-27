@@ -41,6 +41,5 @@ def main() -> None:
     print(tokenusage)
     print("Documentation generated and saved to documentation.md")
 
-
 if __name__ == "__main__":
     main()
