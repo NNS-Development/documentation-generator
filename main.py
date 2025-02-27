@@ -32,6 +32,5 @@ def main() -> None:
     print("Documentation generated and saved to documentation.md")
     print("Done!")
 
-
 if __name__ == "__main__":
     main()

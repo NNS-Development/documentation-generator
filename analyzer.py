@@ -31,9 +31,8 @@ def unrep(s):
         s = s.replace(l, x)
     return s
 def decompress(c):
-    return ast.unparse(ast.parse(unrep(zlib.decompress(base64.b64decode(c)).decode('utf-8'))))
+    return ast.unparse(ast.parse(u(zlib.decompress(base64.b64decode(c)).decode('utf-8'))))
 ```
-
 After running `decompress` on the encoded text, the returned value will be a python AST. 
 Proceed on to the next step. 
 

@@ -45,7 +45,6 @@ REVREP = {v: k for k, v in REPLACEMENTS.items()}
 
 class OutputProfiler:
     """Tracks compression statistics for the parser."""
-    
     def __init__(self) -> None:
         self.original: int = 0
         self.compressed: int = 0
@@ -59,7 +58,6 @@ class OutputProfiler:
             f"Compression savings:          {self.original - self.compressed} characters\n"
             f"Total compression ratio:      {compression_ratio:.1%}\n"
         )
-
 
 class Parser:
     def __init__(self, filename: str) -> None:
