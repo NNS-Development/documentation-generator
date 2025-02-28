@@ -1,8 +1,7 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from ast import dump, parse, AST, Module
 import zlib
 import base64
-from typing import Optional, Tuple, Dict
 
 """
 Parser module for the documentation generator.
@@ -82,35 +81,8 @@ class Parser:
         '''
         replaces keywords with shortened characters
         '''
-        replacements = {
-            "FormattedValue": "FV",
-            "FunctionDef": "FD",
-            "ExceptHandler": "EX",
-            "ImportFrom": "IF",
-            "AnnAssign": "AA",
-            "Attribute": "ATT",
-            "arguments": "ARG",
-            "Subscript": "SS",
-            "Constant": "CO",
-            "ClassDef": "CD",
-            "UnaryOp": "UO",
-            "keyword": "K",
-            "Starred": "ST",
-            "Return": "R",
-            "Assign": "AS",
-            "Import": "I",
-            "Module": "M",
-            "alias": "AL",
-            "Store": "S",
-            "value": "val",
-            "Call": "C",
-            "Expr": "E",
-            "Name": "N",
-            "Load": "L"
-        }
-    
         # does the actual replacement
-        for long, short in replacements.items():
+        for long, short in REPLACEMENTS.items():
             s = s.replace(long, short)
             
         return s
@@ -135,7 +107,6 @@ class Parser:
         print(ast)
         return ast
     
-    @outputlen
     def getcompressed(self) -> str:
         '''
         compresses the ast as much as possible without zlib
@@ -217,15 +188,15 @@ if __name__ == "__main__":
     p = Parser("analyzer.py")
     
     print("Generating normal compression...")
-    nozlib, nozlibdat = p.parse(False)
+    nozlib = p.parse(False)
     
     print("\nGenerating zlib compression...")
-    wzlib, wzlibdat = p.parse()
+    wzlib = p.parse()
 
     print("\nCompression comparison:")
     print(f"Normal compression:  {len(nozlib)} characters")
     print(f"Zlib compression:    {len(wzlib)} characters")
-    print(f"Difference:          {nozlibdat.compressed - wzlibdat.compressed} characters")
+    print(f"Difference:          {len(nozlib) - len(wzlib)} characters")
     
     print("\nNormal compression example:")
     print(nozlib[:100] + "..." if len(nozlib) > 100 else nozlib)

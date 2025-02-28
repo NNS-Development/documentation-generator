@@ -2,7 +2,6 @@ import warnings
 import os
 import base64
 import zlib
-import google.generativeai as genai # type: ignore
 from parser import Parser
 # Suppress GRPC warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
