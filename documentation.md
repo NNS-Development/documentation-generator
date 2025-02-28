@@ -1,168 +1,139 @@
 # Project Overview
 
-This Python code provides a collection of mathematical functions, including basic arithmetic operations, square root, cube root, factorial, Fibonacci sequence, greatest common divisor (GCD), and least common multiple (LCM).
+- **Purpose and Functionality:** This code aims to automatically generate documentation for Python code using Google's Gemini API. It takes compressed Python code (AST) as input, decompresses it, analyzes its structure, and then uses the Gemini API to generate comprehensive documentation in Markdown format.
+- **High-level Architecture/Design Patterns Used:** The code follows a modular design, separating the concerns of code decompression, API interaction, and documentation generation. It uses the `ast` module for parsing and unparsing Python code, `zlib` and `base64` for compression and encoding, and the Google Gemini API for generating the documentation.
+- **Key Features:**
+    - Decompresses specially encoded Python AST.
+    - Interacts with the Google Gemini API to generate documentation.
+    - Generates documentation in Markdown format.
+    - Calculates and displays token usage for the Gemini API.
+    - Saves the generated documentation to a file.
 
-The code is structured using a series of functions, each implementing a specific mathematical operation. The functions are designed to be easy to use and understand, with clear and concise documentation.
+# Technical Documentation
 
-## Technical Documentation
+## Classes:
 
-### Classes
+This code does not explicitly define any classes. However, it utilizes classes from external libraries such as `parser.Parser`, `google.genai.Client`, and `google.genai.types.Content`.
 
-There are no classes defined in the provided code.
+## Functions
 
-### Functions
+### `decompress_ast(compressed: str) -> str`
 
-#### `add(a, b)`
-
-- **Purpose:** Adds two numbers.
+- **Signature:** `decompress_ast(compressed: str) -> str`
+- **Purpose:** Decompresses a compressed string representing a Python AST and converts it back into a readable Python code string.
 - **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The sum of `a` and `b`.
-- **Example:**
-  ```python
-  >>> add(1, 2)
-  3
-  ```
+    - `compressed` (str): A base64-encoded and zlib-compressed string representing a Python AST.
+- **Return Value:**
+    - `str`: The decompressed Python code as a string.
+- **Examples:**
+```python
+# Assuming 'compressed_code' is a valid compressed AST string
+# decompressed_code = decompress_ast(compressed_code)
+# print(decompressed_code)
+```
+- **Exceptions Raised:**
+    - `ValueError`: If decompression fails due to `binascii.Error` or `zlib.error`.
 
-#### `subtract(a, b)`
+### `get_api_key() -> str`
 
-- **Purpose:** Subtracts two numbers.
+- **Signature:** `get_api_key() -> str`
+- **Purpose:** Retrieves the Google Gemini API key from the environment variables or prompts the user to enter it.
+- **Parameters:** None
+- **Return Value:**
+    - `str`: The Google Gemini API key.
+- **Side Effects:**
+    - Prints messages to the console indicating whether the API key was found in the environment or if the user is being prompted to enter it.
+- **Examples:**
+```python
+# api_key = get_api_key()
+# print(api_key)
+```
+
+### `generate(prompt: str) -> str`
+
+- **Signature:** `generate(prompt: str) -> str`
+- **Purpose:** Generates documentation using Google's Gemini API based on the provided prompt.
 - **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The difference of `a` and `b`.
-- **Example:**
-  ```python
-  >>> subtract(3, 2)
-  1
-  ```
+    - `prompt` (str): The prompt to send to the Gemini API (e.g., the decompressed Python code).
+- **Return Value:**
+    - `str`: The generated documentation as a string.
+- **Side Effects:**
+    - Prints messages to the console indicating the progress of the documentation generation process.
+    - Interacts with the Google Gemini API, which may incur costs.
+- **Examples:**
+```python
+# documentation = generate("def hello_world():\n  print('Hello, world!')")
+# print(documentation)
+```
 
-#### `multiply(a, b)`
+### `analyze(compressed_ast: str) -> str`
 
-- **Purpose:** Multiplies two numbers.
+- **Signature:** `analyze(compressed_ast: str) -> str`
+- **Purpose:** Analyzes the compressed AST and generates documentation using the `generate` function.
 - **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The product of `a` and `b`.
-- **Example:**
-  ```python
-  >>> multiply(2, 3)
-  6
-  ```
+    - `compressed_ast` (str): The compressed Python AST string.
+- **Return Value:**
+    - `str`: The generated documentation as a string.
+- **Side Effects:**
+    - Prints a preview of the compressed code to the console.
+- **Examples:**
+```python
+# Assuming 'compressed_code' is a valid compressed AST string
+# documentation = analyze(compressed_code)
+# print(documentation)
+```
 
-#### `divide(a, b)`
+# Dependencies
 
-- **Purpose:** Divides two numbers.
-- **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The quotient of `a` divided by `b`.
-- **Example:**
-  ```python
-  >>> divide(6, 2)
-  3
-  ```
+- **os:** Used to access environment variables.
+- **zlib:** Used for data compression and decompression.
+- **base64:** Used for encoding and decoding data.
+- **getpass:** Used to securely prompt the user for input.
+- **binascii:** Used for converting between binary and ASCII representations.
+- **parser:** (Likely a custom module) Used for parsing and unparsing Python code with REVREP functionality.
+- **google.genai:** Used to interact with the Google Gemini API.
+    - **Version:** The code does not explicitly specify the version.
+- **google.genai.types:** Used to define data types for interacting with the Gemini API.
+    - **Version:** The code does not explicitly specify the version.
 
-#### `power(a, b)`
+# Implementation Details
 
-- **Purpose:** Raises a number to a power.
-- **Parameters:**
-  - `a`: The base number.
-  - `b`: The exponent.
-- **Return value:** `a` raised to the power of `b`.
-- **Example:**
-  ```python
-  >>> power(2, 3)
-  8
-  ```
+- **Key Algorithms Explained:**
+    - **Decompression:** The `decompress_ast` function uses `base64.b64decode` to decode the base64-encoded string and `zlib.decompress` to decompress the resulting data. The `Parser.unreplacek` function is then used to replace special tokens in the decompressed string.
+    - **Documentation Generation:** The `generate` function uses the Google Gemini API to generate documentation. It sets up the API client, defines the prompt, and sends it to the API. The response is then processed and returned as a string.
+- **Important Design Decisions:**
+    - The code uses a compressed AST representation to reduce the size of the code being passed to the Gemini API.
+    - The code uses environment variables to store the API key, which is a more secure approach than hardcoding it in the code.
+- **Performance Considerations:**
+    - The performance of the documentation generation process depends on the size of the code being analyzed and the speed of the Gemini API.
+    - The code calculates and displays token usage to help users understand the cost of using the Gemini API.
 
-#### `square_root(a)`
+# Usage Guide
 
-- **Purpose:** Calculates the square root of a number.
-- **Parameters:**
-  - `a`: The number to find the square root of.
-- **Return value:** The square root of `a`.
-- **Example:**
-  ```python
-  >>> square_root(9)
-  3.0
-  ```
+- **Installation Instructions:**
+    1. Install the required Python packages: `pip install google-generativeai`
+    2. Ensure you have a Google Gemini API key.
+    3. Set the `GEMINI_API_KEY` environment variable to your API key.
+    4. Place the `analyzer.py` file in the same directory as the script.
+- **Configuration Requirements:**
+    - Set the `GEMINI_API_KEY` environment variable.
+- **Code Examples for Common Use Cases:**
+    - To generate documentation for a Python file:
+```bash
+python your_script.py
+```
+    - This will generate a `documentation.md` file in the same directory.
+- **Best Practices:**
+    - Use environment variables to store the API key.
+    - Monitor token usage to avoid unexpected costs.
 
-#### `cube_root(a)`
+# Notes and Warnings
 
-- **Purpose:** Calculates the cube root of a number.
-- **Parameters:**
-  - `a`: The number to find the cube root of.
-- **Return value:** The cube root of `a`.
-- **Example:**
-  ```python
-  >>> cube_root(27)
-  3.0
-  ```
-
-#### `factorial(n)`
-
-- **Purpose:** Calculates the factorial of a number.
-- **Parameters:**
-  - `n`: The number to find the factorial of.
-- **Return value:** The factorial of `n`.
-- **Example:**
-  ```python
-  >>> factorial(5)
-  120
-  ```
-
-#### `fibonacci(n)`
-
-- **Purpose:** Calculates the nth Fibonacci number.
-- **Parameters:**
-  - `n`: The index of the Fibonacci number to find.
-- **Return value:** The nth Fibonacci number.
-- **Example:**
-  ```python
-  >>> fibonacci(10)
-  55
-  ```
-
-#### `gcd(a, b)`
-
-- **Purpose:** Calculates the greatest common divisor (GCD) of two numbers.
-- **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The GCD of `a` and `b`.
-- **Example:**
-  ```python
-  >>> gcd(12, 18)
-  6
-  ```
-
-#### `lcm(a, b)`
-
-- **Purpose:** Calculates the least common multiple (LCM) of two numbers.
-- **Parameters:**
-  - `a`: The first number.
-  - `b`: The second number.
-- **Return value:** The LCM of `a` and `b`.
-- **Example:**
-  ```python
-  >>> lcm(12, 18)
-  36
-  ```
-
-## Dependencies
-
-This code does not have any external dependencies.
-
-## Implementation Details
-
-The code is implemented using a series of simple and efficient algorithms. The basic arithmetic operations (`add`, `subtract`, `multiply`, and `divide`) are implemented using the built-in Python operators. The `power` function uses the `pow` function from the `math` module. The `square_root` and `cube_root` functions use the `sqrt` and `cbrt` functions from the `math` module, respectively. The `factorial` function uses a recursive algorithm to calculate the factorial of a number. The `fibonacci` function uses a recursive algorithm to calculate the nth Fibonacci number. The `gcd` function uses the Euclidean algorithm to calculate the GCD of two numbers. The `lcm` function uses the formula `lcm(a, b) = (a * b) / gcd(a, b)` to calculate the LCM of two numbers.
-
-## Usage Guide
-
-To use this code, simply import the `math_functions` module into your Python script. You can then use the functions provided by the module to perform mathematical operations.
-
-## Notes and Warnings
-
-There are no known limitations or common pitfalls associated with this code. However, it is important to note that the `factorial` and `fibonacci` functions can be computationally expensive for large values of `n`.
+- **Known Limitations:**
+    - The quality of the generated documentation depends on the quality of the Gemini API.
+    - The code may not be able to handle all types of Python code.
+- **Common Pitfalls:**
+    - Forgetting to set the `GEMINI_API_KEY` environment variable.
+    - Exceeding the Gemini API's token limits.
+- **Security Considerations:**
+    - Ensure that the API key is stored securely and not exposed in the code.

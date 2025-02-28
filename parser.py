@@ -2,19 +2,64 @@ from typing import Optional, List
 from ast import dump, parse, AST, Module
 import zlib
 import base64
+from typing import Optional, Tuple, Dict
+
+"""
+Parser module for the documentation generator.
+
+parses and compresses python files
+"""
+
+# Mapping of AST node names to shorter versions for compression
+REPLACEMENTS = {
+    "FormattedValue": "♦",
+    "FunctionDef": "♥",
+    "ExceptHandler": "♣",
+    "ImportFrom": "♠",
+    "AnnAssign": "●",
+    "Attribute": "■",
+    "arguments": "▲",
+    "Subscript": "◆",
+    "Constant": "★",
+    "ClassDef": "✦",
+    "UnaryOp": "►",
+    "keyword": "«",
+    "Starred": "»",
+    "Return": "✓",
+    "Assign": "⌂",
+    "Import": "⌘",
+    "Module": "⊕",
+    "alias": "⊗",
+    "Store": "⊠",
+    "value": "⊡",
+    "Call": "⊢",
+    "Expr": "⊣",
+    "Name": "⋄",
+    "Load": "⋆"
+}
+
+# Reverse mapping for decompression
+REVREP = {v: k for k, v in REPLACEMENTS.items()}
+
+
+class OutputProfiler:
+    """Tracks compression statistics for the parser."""
     
-def outputlen(func):
-    '''returns the length of the output of a function'''
-    def wrapper(*args, **kwargs):
-        out = func(*args, **kwargs)
-        try:
-            outputlen = len(out)
-        except TypeError:
-            outputlen = 0
-        if args[0].debug:
-            args[0].outlens.append(f"output of {func.__name__} is {outputlen} characters long")
-        return out
-    return wrapper
+    def __init__(self) -> None:
+        self.original: int = 0
+        self.compressed: int = 0
+
+    def print(self) -> None:
+        compression_ratio = (self.original - self.compressed) / self.original if self.original > 0 else 0
+        print(
+            f"\nCompressed AST sizes:\n"
+            f"Original:                     {self.original} characters\n"
+            f"Compressed:                   {self.compressed} characters\n"
+            f"Compression savings:          {self.original - self.compressed} characters\n"
+            f"Total compression ratio:      {compression_ratio:.1%}\n"
+        )
+
+
 class Parser:
     def __init__(self, filename: str = "", debug: bool = False) -> None:
         self.filename: str = filename
@@ -71,48 +116,18 @@ class Parser:
         return s
     
     @staticmethod
-    def unreplacek(s: str) -> str:
-        '''
-        replaces shortened characters with original keywords
-        '''
-        replacements = {
-            "FormattedValue": "FV",
-            "FunctionDef": "FD",
-            "ExceptHandler": "EX",
-            "ImportFrom": "IF",
-            "AnnAssign": "AA",
-            "Attribute": "ATT",
-            "arguments": "ARG",
-            "Subscript": "SS",
-            "Constant": "CO",
-            "ClassDef": "CD",
-            "UnaryOp": "UO",
-            "keyword": "K",
-            "Starred": "ST",
-            "Return": "R",
-            "Assign": "AS",
-            "Import": "I",
-            "Module": "M",
-            "alias": "AL",
-            "Store": "S",
-            "value": "val",
-            "Call": "C",
-            "Expr": "E",
-            "Name": "N",
-            "Load": "L"
-        }
-        
-        revreplacements = {v: k for k, v in replacements.items()}
-    
-        # unreplaces
-        for long, short in revreplacements.items():
-            s = s.replace(long, short)
-            
+    def unreplacek(s: str, revrep: Dict[str, str] = REVREP) -> str:
+        """
+        Restore shortened keywords to their original form using regex.
+        """
+        for symbol, keyword in revrep.items():
+            s = s.replace(symbol, keyword)
         return s
     
-    @outputlen
-    def getuncompressed(self) -> str:
-        '''prints the ast in an uncompressed format'''
+    def uncomp(self) -> str:
+        """
+        Get the uncompressed AST string representation.
+        """
         if not self.tree:
             raise RuntimeError("ast is empty. have you run parsefile() yet?")
         
@@ -142,7 +157,24 @@ class Parser:
         print(compast)
         return compast
     
-    @outputlen
+    @staticmethod
+    def decompress(compressed: str, is_zlib: bool = True) -> str:
+        """
+        Decompress an AST representation that was previously compressed.
+        """
+        if is_zlib:
+            # Decode base64 and decompress with zlib
+            try:
+                decoded = base64.b64decode(compressed)
+                decompressed = zlib.decompress(decoded).decode('utf-8')
+            except Exception as e:
+                raise ValueError(f"Failed to decompress data: {e}")
+        else:
+            decompressed = compressed
+            
+        # Restore original keywords
+        return Parser.unreplacek(decompressed)
+    
     def zlibcomp(self) -> str:
         """
         compresses the ast, then compresses it again using zlib
@@ -182,10 +214,31 @@ class Parser:
         return data
     
 if __name__ == "__main__":
-    p = Parser("parser.py", True)
-    print(p.parse(False))
-    print(p.parse())
+    p = Parser("analyzer.py")
+    
+    print("Generating normal compression...")
+    nozlib, nozlibdat = p.parse(False)
+    
+    print("\nGenerating zlib compression...")
+    wzlib, wzlibdat = p.parse()
+
+    print("\nCompression comparison:")
+    print(f"Normal compression:  {len(nozlib)} characters")
+    print(f"Zlib compression:    {len(wzlib)} characters")
+    print(f"Difference:          {nozlibdat.compressed - wzlibdat.compressed} characters")
+    
+    print("\nNormal compression example:")
+    print(nozlib[:100] + "..." if len(nozlib) > 100 else nozlib)
+    
+    print("\nZlib compression example:")
+    print(wzlib[:100] + "..." if len(wzlib) > 100 else wzlib)
     print()
-    print()
-    for i in p.outlens:
-        print(i)
+    print("testing decompression")
+    compr = p.zlibcomp()
+    try:
+        decoded = base64.b64decode(compr)
+        dc = zlib.decompress(decoded).decode('utf-8')
+        result = Parser.unreplacek(dc)
+        print("Compression/decompression compatibility test successful")
+    except Exception as e:
+        print(f"Compatibility test failed: {e}")
