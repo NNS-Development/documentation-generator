@@ -11,35 +11,33 @@ Parser module for the documentation generator.
 parses and compresses python files
 """
 
-# Mapping of AST node names to shorter versions for compression
 REPLACEMENTS = {
-    "FormattedValue": "~",
-    "FunctionDef": "$",
-    "ExceptHandler": "¢",
-    "ImportFrom": "£",
-    "AnnAssign": "¥",
-    "Attribute": "§",
-    "arguments": "©",
-    "Subscript": "®",
-    "Constant": "°",
-    "ClassDef": "µ",
-    "UnaryOp": "¶",
-    "keyword": "†",
-    "Starred": "‡",
-    "Return": "Ω",
-    "Assign": "√",
-    "Import": "√",
-    "Module": "∞",
-    "alias": "≈",
-    "Store": "≠",
-    "value": "≤",
-    "Call": "÷",
-    "Expr": "‰", 
-    "Name": "♠",
-    "Load": "≥"
+    "FormattedValue": "♦",
+    "FunctionDef": "♥",
+    "ExceptHandler": "♣",
+    "ImportFrom": "♠",
+    "AnnAssign": "●",
+    "Attribute": "■",
+    "arguments": "▲",
+    "Subscript": "◆",
+    "Constant": "★",
+    "ClassDef": "✦",
+    "UnaryOp": "►",
+    "keyword": "«",
+    "Starred": "»",
+    "Return": "✓",
+    "Assign": "⌂",
+    "Import": "⌘",
+    "Module": "⊕",
+    "alias": "⊗",
+    "Store": "⊠",
+    "value": "⊡",
+    "Call": "⊢",
+    "Expr": "⊣",
+    "Name": "⋄",
+    "Load": "⋆"
 }
 
-# Reverse mapping for decompression
 REVREP = {v: k for k, v in REPLACEMENTS.items()}
 
 
@@ -99,7 +97,7 @@ class Parser:
         if not self.tree:
             raise RuntimeError("AST is empty. Have you run parse() yet?")
         
-        # Remove unnecessary whitespace, attributes, and field annotations
+        # minimal ast
         compast: str = ast.dump(
             self.tree, 
             annotate_fields=False, 
@@ -107,13 +105,29 @@ class Parser:
             indent=0
         )
         
-        # Remove all whitespace
+        # remove all whitespace
         compast = "".join(compast.split())
         
-        # Replace keywords with shorter versions
+        # replace keywords with symbols
         compast = self.replacek(compast, REPLACEMENTS)
         
         return compast
+    
+    @staticmethod
+    def decompress(compressed: str, is_zlib: bool = True) -> str:
+        """
+        Decompress an AST representation that was previously compressed.
+        """
+        if is_zlib:
+            try:
+                decoded = base64.b64decode(compressed)
+                decompressed = zlib.decompress(decoded).decode('utf-8')
+            except Exception as e:
+                raise ValueError(f"Failed to decompress data: {e}")
+        else:
+            decompressed = compressed
+            
+        return Parser.unreplacek(decompressed)
     
     def zlibcomp(self) -> str:
         """
@@ -122,7 +136,7 @@ class Parser:
         if not self.tree:
             raise RuntimeError("AST is empty. Have you run parse() yet?")
         
-        # Minimal AST string representation
+        # minimal ast
         aststr = ast.dump(
             self.tree,
             annotate_fields=False,
@@ -130,11 +144,10 @@ class Parser:
             indent=0
         )
 
-        # Remove whitespace and apply keyword replacements
         aststr = "".join(aststr.split())
         aststr = self.replacek(aststr, REPLACEMENTS)
         
-        # Compress with zlib and encode with base64
+        # compress
         compbytes = zlib.compress(aststr.encode('utf-8'))
         return base64.b64encode(compbytes).decode('utf-8')
 
@@ -160,7 +173,7 @@ class Parser:
             print(f"Error: Unable to parse syntax in {self.file}: {e}")
             sys.exit(1)
 
-        # Calculate compression statistics
+        # stats
         profiler.original = len(self.uncomp())
         data = self.zlibcomp() if zlibc else self.comp()
         profiler.compressed = len(data)
@@ -189,3 +202,12 @@ if __name__ == "__main__":
     
     print("\nZlib compression example:")
     print(wzlib[:100] + "..." if len(wzlib) > 100 else wzlib)
+
+    compr = wzlib
+    try:
+        decompressed = Parser.decompress(compr)
+        print("Compression/decompression compatibility test successful")
+        # Optionally print a small part of the decompressed string to verify
+        print(decompressed[:100] + "..." if len(decompressed) > 100 else decompressed)
+    except Exception as e:
+        print(f"Compatibility test failed: {e}")
