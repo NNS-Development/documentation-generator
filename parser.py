@@ -1,7 +1,9 @@
-from typing import Optional, List, Dict
-from ast import dump, parse, AST, Module
+import re
+import ast
+import sys
 import zlib
 import base64
+from typing import Optional, Tuple, Dict
 
 """
 Parser module for the documentation generator.
@@ -11,30 +13,30 @@ parses and compresses python files
 
 # Mapping of AST node names to shorter versions for compression
 REPLACEMENTS = {
-    "FormattedValue": "♦",
-    "FunctionDef": "♥",
-    "ExceptHandler": "♣",
-    "ImportFrom": "♠",
-    "AnnAssign": "●",
-    "Attribute": "■",
-    "arguments": "▲",
-    "Subscript": "◆",
-    "Constant": "★",
-    "ClassDef": "✦",
-    "UnaryOp": "►",
-    "keyword": "«",
-    "Starred": "»",
-    "Return": "✓",
-    "Assign": "⌂",
-    "Import": "⌘",
-    "Module": "⊕",
-    "alias": "⊗",
-    "Store": "⊠",
-    "value": "⊡",
-    "Call": "⊢",
-    "Expr": "⊣",
-    "Name": "⋄",
-    "Load": "⋆"
+    "FormattedValue": "~",
+    "FunctionDef": "$",
+    "ExceptHandler": "¢",
+    "ImportFrom": "£",
+    "AnnAssign": "¥",
+    "Attribute": "§",
+    "arguments": "©",
+    "Subscript": "®",
+    "Constant": "°",
+    "ClassDef": "µ",
+    "UnaryOp": "¶",
+    "keyword": "†",
+    "Starred": "‡",
+    "Return": "Ω",
+    "Assign": "√",
+    "Import": "√",
+    "Module": "∞",
+    "alias": "≈",
+    "Store": "≠",
+    "value": "≤",
+    "Call": "÷",
+    "Expr": "‰", 
+    "Name": "♠",
+    "Load": "≥"
 }
 
 # Reverse mapping for decompression
@@ -43,7 +45,6 @@ REVREP = {v: k for k, v in REPLACEMENTS.items()}
 
 class OutputProfiler:
     """Tracks compression statistics for the parser."""
-    
     def __init__(self) -> None:
         self.original: int = 0
         self.compressed: int = 0
@@ -58,158 +59,133 @@ class OutputProfiler:
             f"Total compression ratio:      {compression_ratio:.1%}\n"
         )
 
-
 class Parser:
-    def __init__(self, filename: str = "", debug: bool = False) -> None:
-        self.filename: str = filename
-        self.tree: Optional[AST] = None
-        self.debug = debug
-        if debug:
-            self.outlens: List[str] = []
-    
-    def parsefile(self) -> Module:
-        '''parses the file and returns the ast'''
-        with open(self.filename, "r") as f:
-            source: str = f.read()
-        
-        module: Module = parse(source)
-        self.tree = module
-        return self.tree
+    def __init__(self, filename: str) -> None:
+        """
+        Initialize a new Parser instance.
+        """
+        self.file = filename
+        self.tree: Optional[ast.AST] = None
     
     @staticmethod
-    def replacek(s: str) -> str:
-        '''
-        replaces keywords with shortened characters
-        '''
-        # does the actual replacement
-        for long, short in REPLACEMENTS.items():
-            s = s.replace(long, short)
-            
-        return s
-    
+    def replacek(s: str, replacements: Dict[str, str]) -> str:
+        """
+        Replace keywords in a string with their shortened versions using regex.
+        """
+        pattern = re.compile(r'\b(' + '|'.join(map(re.escape, replacements.keys())) + r')\b')
+        return pattern.sub(lambda x: replacements[x.group()], s)
+
     @staticmethod
     def unreplacek(s: str, revrep: Dict[str, str] = REVREP) -> str:
         """
         Restore shortened keywords to their original form using regex.
         """
-        for symbol, keyword in revrep.items():
-            s = s.replace(symbol, keyword)
-        return s
+        pattern = re.compile(r'\b(' + '|'.join(map(re.escape, revrep.keys())) + r')\b')
+        return pattern.sub(lambda x: revrep[x.group()], s)
     
     def uncomp(self) -> str:
         """
         Get the uncompressed AST string representation.
         """
         if not self.tree:
-            raise RuntimeError("ast is empty. have you run parsefile() yet?")
+            raise RuntimeError("AST is empty. Have you run parse() yet?")
         
-        ast: str = dump(self.tree, indent=4)
-        print(ast)
-        return ast
+        return ast.dump(self.tree, indent=4)
     
-    def getcompressed(self) -> str:
-        '''
-        compresses the ast as much as possible without zlib
-        can be passed into gemini 2.0 flash
-        '''
+    def comp(self) -> str:
+        """
+        Compress the AST using keyword replacement and whitespace removal.
+        """
         if not self.tree:
-            raise RuntimeError("ast is empty. have you run parsefile() yet?")
+            raise RuntimeError("AST is empty. Have you run parse() yet?")
         
-        # ballpark figures lol
-        # removes unnecessary whitespace and attributes (decreases length of output by ~71%)
-        compast: str = dump(self.tree, annotate_fields=False, include_attributes=False, indent=0)
+        # Remove unnecessary whitespace, attributes, and field annotations
+        compast: str = ast.dump(
+            self.tree, 
+            annotate_fields=False, 
+            include_attributes=False, 
+            indent=0
+        )
         
-        # remove newlines + whitespace (decreases length by ~7%)
+        # Remove all whitespace
         compast = "".join(compast.split())
         
-        # replace keywords with shorter versions (decreases length by ~40%)
-        compast = self.replacek(compast)
-            
-        print(compast)
+        # Replace keywords with shorter versions
+        compast = self.replacek(compast, REPLACEMENTS)
+        
         return compast
-    
-    @staticmethod
-    def decompress(compressed: str, is_zlib: bool = True) -> str:
-        """
-        Decompress an AST representation that was previously compressed.
-        """
-        if is_zlib:
-            # Decode base64 and decompress with zlib
-            try:
-                decoded = base64.b64decode(compressed)
-                decompressed = zlib.decompress(decoded).decode('utf-8')
-            except Exception as e:
-                raise ValueError(f"Failed to decompress data: {e}")
-        else:
-            decompressed = compressed
-            
-        # Restore original keywords
-        return Parser.unreplacek(decompressed)
     
     def zlibcomp(self) -> str:
         """
-        compresses the ast, then compresses it again using zlib
-        can be passed into gemini 2.0 pro
+        Compress the AST using keyword replacement, whitespace removal, zlib, and base64 encoding.
         """
         if not self.tree:
-            raise RuntimeError("AST is empty. Have you run parsefile() yet?")
+            raise RuntimeError("AST is empty. Have you run parse() yet?")
         
-        # minimal formatting
-        ast = dump(
+        # Minimal AST string representation
+        aststr = ast.dump(
             self.tree,
             annotate_fields=False,
             include_attributes=False,
             indent=0
         )
-        # no whitespace
-        ast = "".join(ast.split())
-        
-        # replace keywords with shorter versions (decreases length by ~40%)
-        ast = self.replacek(ast)
-        
-        # base64 compressed bytes
-        compbytes = zlib.compress(ast.encode('utf-8'))
-        encstr = base64.b64encode(compbytes).decode('utf-8')
-        
-        return encstr
 
-    def parse(self, zlibc: bool = True) -> str:
-        '''entry point'''
-        self.parsefile()
+        # Remove whitespace and apply keyword replacements
+        aststr = "".join(aststr.split())
+        aststr = self.replacek(aststr, REPLACEMENTS)
+        
+        # Compress with zlib and encode with base64
+        compbytes = zlib.compress(aststr.encode('utf-8'))
+        return base64.b64encode(compbytes).decode('utf-8')
 
-        if zlibc:
-            data = self.zlibcomp()
-        else:
-            data = self.getcompressed()
+    def parse(self, zlibc: bool = True) -> Tuple[str, OutputProfiler]:
+        """
+        Parse the source file and return its compressed representation.
+        """
+        profiler = OutputProfiler()
 
-        return data
-    
+        try:
+            with open(self.file, "r") as f:
+                source: str = f.read()
+        except FileNotFoundError:
+            print(f"Error: {self.file} is not a valid file path.")
+            sys.exit(1)
+        except IOError as e:
+            print(f"Error: Unable to read file {self.file}: {e}")
+            sys.exit(1)
+        
+        try:
+            self.tree = ast.parse(source)
+        except SyntaxError as e:
+            print(f"Error: Unable to parse syntax in {self.file}: {e}")
+            sys.exit(1)
+
+        # Calculate compression statistics
+        profiler.original = len(self.uncomp())
+        data = self.zlibcomp() if zlibc else self.comp()
+        profiler.compressed = len(data)
+
+        profiler.print()
+        
+        return data, profiler
+
+
 if __name__ == "__main__":
-    p = Parser("analyzer.py")
+    p = Parser("parser.py")
     
     print("Generating normal compression...")
-    nozlib = p.parse(False)
+    nozlib, nozlibdat = p.parse(False)
     
     print("\nGenerating zlib compression...")
-    wzlib = p.parse()
+    wzlib, wzlibdat = p.parse()
 
     print("\nCompression comparison:")
     print(f"Normal compression:  {len(nozlib)} characters")
     print(f"Zlib compression:    {len(wzlib)} characters")
-    print(f"Difference:          {len(nozlib) - len(wzlib)} characters")
+    print(f"Difference:          {nozlibdat.compressed - wzlibdat.compressed} characters")
     
     print("\nNormal compression example:")
     print(nozlib[:100] + "..." if len(nozlib) > 100 else nozlib)
     
     print("\nZlib compression example:")
     print(wzlib[:100] + "..." if len(wzlib) > 100 else wzlib)
-    print()
-    print("testing decompression")
-    compr = p.zlibcomp()
-    try:
-        decoded = base64.b64decode(compr)
-        dc = zlib.decompress(decoded).decode('utf-8')
-        result = Parser.unreplacek(dc)
-        print("Compression/decompression compatibility test successful")
-    except Exception as e:
-        print(f"Compatibility test failed: {e}")

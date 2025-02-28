@@ -1,44 +1,36 @@
 from parser import Parser
-from analyzer import main as analyze_main
-import sys
+import analyzer
 
-"""
-main.py
+def stripartifacts(docs: str) -> str:
+    project_overview_index = docs.find("# Project Overview")
 
-Main script that coordinates between parser.py and analyzer.py to:
-1. Parse a Python file into an AST
-2. Compress the AST
-3. Generate documentation using Gemini API
-"""
+    if project_overview_index != -1:
+        docs = docs[project_overview_index:]
 
-def main():
-    # gits filename
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
-    else:
-        filename = input("Enter Python file to parse (or press Enter for 'test.py'): ").strip() or "test.py"
+    docs = docs[:-3] if docs.endswith('```') else docs
 
-    try:
-        # Initialize parser
-        print(f"\nInitializing parser for {filename}...")
-        parser = Parser(filename)
+    return docs
 
-        # Parse and compress the file
-        print("Parsing and compressing file...")
-        compressed_ast = parser.parse()  # Get actual compressed string, not the length info
-        print(compressed_ast)
-        # Generate documentation
-        print("\nGenerating documentation using Gemini API...")
-        analyze_main(compressed_ast)
+def main() -> None:
+    """
+    Main entry point
+    """
+    print("Documentation generator")
+    
+    parser = Parser("analyzer.py")
+    compressed_ast, profiler = parser.parse()
+    
+    documentation = analyzer.analyze(compressed_ast)
 
-        print("\nProcess completed successfully!")
-        print("You can find the generated documentation in 'documentation.md'")
+    print("Removing artifacts...")
+    documentation = stripartifacts(documentation)
+    
+    print("Writing to file...")
+    with open("documentation.md", "w", encoding="utf-8") as file:
+        file.writelines(documentation)
 
-    except FileNotFoundError:
-        print(f"Error: File '{filename}' not found")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        raise
+    print("Documentation generated and saved to documentation.md")
+    print("Done!")
 
 if __name__ == "__main__":
     main()
