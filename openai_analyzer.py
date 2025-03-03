@@ -122,8 +122,6 @@ def get_api_key() -> str:
         
     return api_key
 
-
-
 def generate(prompt: str) -> str:
     """
     Generate documentation using OpenAI's ChatGPT API.
@@ -139,40 +137,46 @@ def generate(prompt: str) -> str:
         {"role": "user", "content": prompt}
     ]
 
+    # Calculate tokens in the prompt
+    prompt_tokens = sum(len(encoding.encode(msg["content"])) for msg in messages)
+    model_context_limit = 8192
+    available_tokens = model_context_limit - prompt_tokens
+    if available_tokens <= 0:
+        raise ValueError("Prompt exceeds the model's maximum context length.")
+
     print("Generating documentation using ChatGPT's API...")
     response_str = ""
 
     try:
         stream = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages, # type: ignore
             temperature=0,
             top_p=0.5,
-            max_tokens=8192,
+            max_tokens=available_tokens,  # Use computed available tokens
             stream=True,
         )
 
-        # Stream the response content as per the documentation example
         for chunk in stream:
-            content = chunk.choices[0].delta.content or ""
-            response_str += content
+            content = chunk.choices[0].delta.get("content") # type: ignore
+            if content:
+                response_str += content
 
     except Exception as e:
         raise RuntimeError(f"OpenAI API error: {e}")
 
     print("Calculating token usage...")
-    prompt_tokens = sum(len(encoding.encode(msg["content"])) for msg in messages)
     response_tokens = len(encoding.encode(response_str))
-
     token_usage = [
         "\nToken Usage:\n",
-        f"Prompt tokens:               {prompt_tokens}\n",
-        f"Response tokens:             {response_tokens}\n",
-        f"Total tokens:                {prompt_tokens + response_tokens}\n"
+        f"Prompt tokens: {prompt_tokens}\n",
+        f"Response tokens: {response_tokens}\n",
+        f"Total tokens: {prompt_tokens + response_tokens}\n"
     ]
     print("".join(token_usage))
     
     return response_str
+
 
 def analyze(compressed_ast: str) -> str:
     """
@@ -195,9 +199,9 @@ def analyze(compressed_ast: str) -> str:
 if __name__ == "__main__":
     # Parse and compress this file
     print("Parsing and compressing analyzer.py...")
-    p = Parser("analyzer.py")
+    p = Parser("test.py")
     compressed_ast, profiler = p.parse()
-    
+
     # Generate documentation
     documentation = analyze(compressed_ast)
 
