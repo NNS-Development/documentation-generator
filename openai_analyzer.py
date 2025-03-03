@@ -6,8 +6,8 @@ import binascii
 from parser import Parser, REVREP
 
 # API imports
-from google import genai
-from google.genai import types
+import openai
+import tiktoken
 
 """
 Analyzer module for the documentation generator.
@@ -111,11 +111,11 @@ def decompress_ast(compressed: str) -> str:
 
 
 def get_api_key() -> str:
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     
     if api_key is None:
         print("No API key found in environment.")
-        print("Input your Google Gemini API key. (It will not be displayed)")
+        print("Input your OpenAI API key. (It will not be displayed)")
         api_key = getpass.getpass("> ")
     else:
         print("Using API key from environment.")
@@ -123,95 +123,56 @@ def get_api_key() -> str:
     return api_key
 
 
+
 def generate(prompt: str) -> str:
     """
-    Generate documentation using Google's Gemini API.
+    Generate documentation using OpenAI's ChatGPT API.
     """
-    print("Setting up Gemini API...")
+    print("Setting up OpenAI API...")
     api_key = get_api_key()
-    
-    # Initialize client and model
-    client = genai.Client(api_key=api_key)
-    model = "gemini-2.0-flash"
+    client = openai.OpenAI(api_key=api_key)
+    model = "gpt-4"
+    encoding = tiktoken.encoding_for_model(model)
 
-    contents = [
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=prompt)],
-        ),
-    ]
-    
-    tools = [
-        types.Tool(code_execution=types.ToolCodeExecution),
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": prompt}
     ]
 
-    generate_content_config = types.GenerateContentConfig(
-        temperature=0,
-        top_p=0.5,
-        max_output_tokens=8192,
-        tools=tools,
-        response_mime_type="text/plain",
-        system_instruction=[
-            types.Part.from_text(text=SYSTEM_PROMPT),
-        ],
-    )
+    print("Generating documentation using ChatGPT's API...")
+    response_str = ""
 
-    print("Generating documentation using Gemini's API...")
-    response_chunks = []
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0,
+            top_p=0.5,
+            max_tokens=8192,
+            stream=True,
+        )
 
-    for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        if (not chunk.candidates or 
-            not chunk.candidates[0].content or 
-            not chunk.candidates[0].content.parts):
-            continue
-            
-        if chunk.candidates[0].content.parts[0].text:
-            response_chunks.append(chunk.candidates[0].content.parts[0].text)
-    
-    response_str = "".join(response_chunks)
+        # Stream the response content as per the documentation example
+        for chunk in stream:
+            content = chunk.choices[0].delta.content or ""
+            response_str += content
 
-    # Calculate token usage
+    except Exception as e:
+        raise RuntimeError(f"OpenAI API error: {e}")
+
     print("Calculating token usage...")
-    prompt_content = [
-        types.Content(
-            role="user", 
-            parts=[types.Part.from_text(text=prompt)]
-        )
-    ]
-    prompt_tokens = client.models.count_tokens(
-        model=model, 
-        contents=prompt_content
-    ).total_tokens
+    prompt_tokens = sum(len(encoding.encode(msg["content"])) for msg in messages)
+    response_tokens = len(encoding.encode(response_str))
 
-    response_content = [
-        types.Content(
-            role="model", 
-            parts=[types.Part.from_text(text=response_str)]
-        )
-    ]
-    response_tokens = client.models.count_tokens(
-        model=model, 
-        contents=response_content
-    ).total_tokens
-
-    tokenusage = [
+    token_usage = [
         "\nToken Usage:\n",
         f"Prompt tokens:               {prompt_tokens}\n",
         f"Response tokens:             {response_tokens}\n",
         f"Total tokens:                {prompt_tokens + response_tokens}\n"
     ]
-
-    tokenusagestr = "".join(tokenusage)
-
-    print(tokenusagestr)
+    print("".join(token_usage))
     
     return response_str
-
-
 
 def analyze(compressed_ast: str) -> str:
     """
@@ -243,7 +204,6 @@ if __name__ == "__main__":
     # Save output to file
     print("Saving documentation to file...")
     with open("documentation.md", "w", encoding="utf-8") as file:
-        file.writelines(documentation)
+        file.write(documentation)
 
-    # Display token usage and completion message
     print("Documentation generated and saved to documentation.md")
