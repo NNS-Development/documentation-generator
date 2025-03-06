@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Project Overview
 
 - **Purpose and Functionality:** This code aims to automatically generate documentation for Python code using Google's Gemini API. It takes compressed Python code (AST) as input, decompresses it, analyzes its structure, and then uses the Gemini API to generate comprehensive documentation in Markdown format.
@@ -138,5 +137,3 @@ python your_script.py
     - Exceeding the Gemini API's token limits.
 - **Security Considerations:**
     - Ensure that the API key is stored securely and not exposed in the code.
-=======
->>>>>>> f75ce9223171fed3e9d82e2b2465f35a81714fb2
